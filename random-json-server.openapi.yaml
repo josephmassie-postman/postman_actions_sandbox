@@ -1,4 +1,4 @@
-openapi: 3.1.0
+openapi: 4.0.0
 info:
   title: Random JSON Server API
   version: 1.0.0
