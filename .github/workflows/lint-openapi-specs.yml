@@ -1,0 +1,53 @@
+name: Lint OpenAPI Specs
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+
+permissions:
+  contents: read
+
+jobs:
+  lint-openapi-specs:
+    name: Lint OpenAPI Specs
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Install Postman CLI
+        run: npm install -g postman-cli
+
+      - name: Authenticate Postman CLI
+        run: postman login --with-api-key "$POSTMAN_API_KEY"
+        env:
+          POSTMAN_API_KEY: ${{ secrets.POSTMAN_API_KEY }}
+
+      - name: Lint all OpenAPI specs
+        env:
+          POSTMAN_LINT_ALL: "true"
+        run: |
+          set +e
+          set -o pipefail
+
+          echo "## OpenAPI Spec Lint Results" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo '```text' >> "$GITHUB_STEP_SUMMARY"
+
+          node scripts/lint-postman-specs.js 2>&1 | tee postman-spec-lint.log
+          lint_exit=${PIPESTATUS[0]}
+
+          cat postman-spec-lint.log >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+          exit "$lint_exit"
