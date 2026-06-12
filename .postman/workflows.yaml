@@ -9,8 +9,10 @@ workflows:
       collection: ../postman/collections/Testing
       options:
         syncExamples: false
+        includeWebhooks: true
   syncCollectionToSpec:
     - spec: ../random-json-server.openapi.yaml
       collection: ../postman/collections/Testing
       options:
         syncExamples: false
+        includeWebhooks: true

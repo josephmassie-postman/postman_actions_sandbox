@@ -6,5 +6,18 @@ headers:
 body:
   type: text
   content: ""
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Response is an object", function () {
+          var json = pm.response.json();
+          pm.expect(json).to.be.an("object");
+      });
+
+      pm.test("Service information body is not empty", function () {
+          var json = pm.response.json();
+          pm.expect(Object.keys(json).length).to.be.above(0);
+      });
+    language: text/javascript
 examples: ./.resources/Get service information.resources/examples
 order: 1000

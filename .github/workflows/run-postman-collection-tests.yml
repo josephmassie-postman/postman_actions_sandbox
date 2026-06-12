@@ -1,0 +1,105 @@
+name: Run Postman Collection Tests
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+  workflow_dispatch:
+    inputs:
+      environment_uid:
+        description: "Optional Postman environment UID override"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  run-postman-collection-tests:
+    name: Run Postman Collection Tests
+    runs-on: ubuntu-latest
+    env:
+      POSTMAN_TEST_ENVIRONMENT_UID: ${{ inputs.environment_uid || vars.POSTMAN_TEST_ENVIRONMENT_UID }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Install Postman CLI
+        run: npm install -g postman-cli
+
+      - name: Authenticate Postman CLI
+        run: postman login --with-api-key "$POSTMAN_API_KEY"
+        env:
+          POSTMAN_API_KEY: ${{ secrets.POSTMAN_API_KEY }}
+
+      - name: Run tests for all repo collections
+        run: |
+          set +e
+          set -o pipefail
+
+          environment_uid="${POSTMAN_TEST_ENVIRONMENT_UID}"
+          if [ -z "$environment_uid" ]; then
+            environment_uid="$(ruby -ryaml -e '
+              data = YAML.load_file(".postman/resources.yaml") || {}
+              environments = data.fetch("cloudResources", {}).fetch("environments", {})
+              uid = environments.values.first
+              puts uid if uid
+            ')"
+          fi
+
+          ruby -ryaml -e '
+            data = YAML.load_file(".postman/resources.yaml") || {}
+            collections = data.fetch("cloudResources", {}).fetch("collections", {})
+            collections.each { |path, uid| puts "#{path}\t#{uid}" }
+          ' > collection-list.tsv
+
+          if [ ! -s collection-list.tsv ]; then
+            echo "No cloud collections found in .postman/resources.yaml."
+            echo "## Postman Collection Test Results" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "No cloud collections found in \`.postman/resources.yaml\`." >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
+          echo "## Postman Collection Test Results" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          if [ -n "$environment_uid" ]; then
+            echo "Using Postman environment UID: \`$environment_uid\`" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "No Postman environment UID configured; running collections without an environment." >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+
+          overall_exit=0
+          while IFS=$'\t' read -r collection_path collection_uid; do
+            echo "Running collection: ${collection_path} (${collection_uid})"
+            echo "### ${collection_path}" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo '```text' >> "$GITHUB_STEP_SUMMARY"
+
+            if [ -n "$environment_uid" ]; then
+              postman collection run "$collection_uid" --environment "$environment_uid" 2>&1 | tee postman-collection-test.log
+            else
+              postman collection run "$collection_uid" 2>&1 | tee postman-collection-test.log
+            fi
+            run_exit=${PIPESTATUS[0]}
+
+            cat postman-collection-test.log >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+
+            if [ "$run_exit" -ne 0 ]; then
+              overall_exit=1
+            fi
+          done < collection-list.tsv
+
+          exit "$overall_exit"

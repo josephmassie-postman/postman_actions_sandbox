@@ -35,22 +35,77 @@ jobs:
       - name: Install Postman CLI
         run: npm install -g postman-cli
 
+      - name: Detect spec changes
+        id: detect-spec-changes
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.sync_all }}" = "true" ]; then
+            echo "has_spec_changes=true" >> "$GITHUB_OUTPUT"
+            echo "Manual run requested full sync."
+            exit 0
+          fi
+
+          BASE_SHA="${{ github.event.before }}"
+          HEAD_SHA="${{ github.sha }}"
+          export BASE_SHA HEAD_SHA
+
+          if [ -z "$BASE_SHA" ] || [ "$BASE_SHA" = "0000000000000000000000000000000000000000" ]; then
+            echo "has_spec_changes=true" >> "$GITHUB_OUTPUT"
+            echo "No valid base SHA found; defaulting to run sync."
+            exit 0
+          fi
+
+          node <<'EOF' >> "$GITHUB_OUTPUT"
+          const { execFileSync } = require('child_process');
+          const { readFileSync, existsSync } = require('fs');
+
+          const configPath = '.postman-sync.json';
+          if (!existsSync(configPath)) {
+            console.log('No .postman-sync.json found; skipping sync.');
+            process.stdout.write('has_spec_changes=false\n');
+            process.exit(0);
+          }
+
+          const config = JSON.parse(readFileSync(configPath, 'utf8'));
+          const specs = config.specs || [];
+          const changedFiles = new Set(
+            execFileSync('git', ['diff', '--name-only', process.env.BASE_SHA, process.env.HEAD_SHA], {
+              encoding: 'utf8',
+            })
+              .split('\n')
+              .filter(Boolean),
+          );
+
+          const hasSpecChanges = specs.some((spec) => {
+            const watchedPaths = [spec.path, ...(spec.watchPaths || []), configPath];
+            return watchedPaths.some((watchedPath) => changedFiles.has(watchedPath));
+          });
+
+          process.stdout.write(`has_spec_changes=${hasSpecChanges ? 'true' : 'false'}\n`);
+          EOF
+
+      - name: Skip sync when no spec changes detected
+        if: steps.detect-spec-changes.outputs.has_spec_changes != 'true'
+        run: echo "No configured spec changes detected; skipping lint and sync."
+
       - name: Authenticate Postman CLI
+        if: steps.detect-spec-changes.outputs.has_spec_changes == 'true'
         run: postman login --with-api-key "$POSTMAN_API_KEY"
         env:
           POSTMAN_API_KEY: ${{ secrets.POSTMAN_API_KEY }}
 
       - name: Lint changed OpenAPI specs
+        if: steps.detect-spec-changes.outputs.has_spec_changes == 'true'
         run: node scripts/lint-postman-specs.js
         env:
-          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
-          HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          BASE_SHA: ${{ github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
           POSTMAN_SYNC_ALL: ${{ github.event_name == 'workflow_dispatch' && inputs.sync_all || 'false' }}
 
       - name: Sync changed OpenAPI specs to Postman
+        if: steps.detect-spec-changes.outputs.has_spec_changes == 'true'
         run: node scripts/sync-postman-specs.js
         env:
           POSTMAN_API_KEY: ${{ secrets.POSTMAN_API_KEY }}
-          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
-          HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          BASE_SHA: ${{ github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
           POSTMAN_SYNC_ALL: ${{ github.event_name == 'workflow_dispatch' && inputs.sync_all || 'false' }}
