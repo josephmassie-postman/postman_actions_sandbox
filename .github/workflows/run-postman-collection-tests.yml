@@ -8,6 +8,11 @@ on:
       - reopened
       - ready_for_review
   workflow_dispatch:
+    inputs:
+      environment_uid:
+        description: "Optional Postman environment UID override"
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -16,6 +21,8 @@ jobs:
   run-postman-collection-tests:
     name: Run Postman Collection Tests
     runs-on: ubuntu-latest
+    env:
+      POSTMAN_TEST_ENVIRONMENT_UID: ${{ inputs.environment_uid || vars.POSTMAN_TEST_ENVIRONMENT_UID }}
 
     steps:
       - name: Checkout repository
@@ -39,6 +46,16 @@ jobs:
           set +e
           set -o pipefail
 
+          environment_uid="${POSTMAN_TEST_ENVIRONMENT_UID}"
+          if [ -z "$environment_uid" ]; then
+            environment_uid="$(ruby -ryaml -e '
+              data = YAML.load_file(".postman/resources.yaml") || {}
+              environments = data.fetch("cloudResources", {}).fetch("environments", {})
+              uid = environments.values.first
+              puts uid if uid
+            ')"
+          fi
+
           ruby -ryaml -e '
             data = YAML.load_file(".postman/resources.yaml") || {}
             collections = data.fetch("cloudResources", {}).fetch("collections", {})
@@ -55,6 +72,12 @@ jobs:
 
           echo "## Postman Collection Test Results" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
+          if [ -n "$environment_uid" ]; then
+            echo "Using Postman environment UID: \`$environment_uid\`" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "No Postman environment UID configured; running collections without an environment." >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo "" >> "$GITHUB_STEP_SUMMARY"
 
           overall_exit=0
           while IFS=$'\t' read -r collection_path collection_uid; do
@@ -63,7 +86,11 @@ jobs:
             echo "" >> "$GITHUB_STEP_SUMMARY"
             echo '```text' >> "$GITHUB_STEP_SUMMARY"
 
-            postman collection run "$collection_uid" 2>&1 | tee postman-collection-test.log
+            if [ -n "$environment_uid" ]; then
+              postman collection run "$collection_uid" --environment "$environment_uid" 2>&1 | tee postman-collection-test.log
+            else
+              postman collection run "$collection_uid" 2>&1 | tee postman-collection-test.log
+            fi
             run_exit=${PIPESTATUS[0]}
 
             cat postman-collection-test.log >> "$GITHUB_STEP_SUMMARY"
