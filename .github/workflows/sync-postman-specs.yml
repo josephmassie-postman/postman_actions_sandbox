@@ -1,0 +1,61 @@
+name: Sync Postman Specs
+
+on:
+  push:
+    paths:
+      - "pipeline_configurations/.postman-sync.json"
+      - "pipeline_configurations/scripts/lint-postman-specs.js"
+      - "pipeline_configurations/scripts/sync-postman-specs.js"
+      - "**/*.yaml"
+      - "**/*.yml"
+  pull_request:
+    paths:
+      - "pipeline_configurations/.postman-sync.json"
+      - "pipeline_configurations/scripts/lint-postman-specs.js"
+      - "pipeline_configurations/scripts/sync-postman-specs.js"
+      - "**/*.yaml"
+      - "**/*.yml"
+  workflow_dispatch:
+    inputs:
+      sync_all:
+        description: "Sync every spec in pipeline_configurations/.postman-sync.json"
+        required: false
+        default: "true"
+
+jobs:
+  sync-postman-specs:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Install Postman CLI
+        run: npm install -g postman-cli
+
+      - name: Authenticate Postman CLI
+        run: postman login --with-api-key "$POSTMAN_API_KEY"
+        env:
+          POSTMAN_API_KEY: ${{ secrets.POSTMAN_API_KEY }}
+
+      - name: Lint changed OpenAPI specs
+        run: node pipeline_configurations/scripts/lint-postman-specs.js
+        env:
+          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          POSTMAN_SYNC_ALL: ${{ github.event_name == 'workflow_dispatch' && inputs.sync_all || 'false' }}
+
+      - name: Sync changed OpenAPI specs to Postman
+        run: node pipeline_configurations/scripts/sync-postman-specs.js
+        env:
+          POSTMAN_API_KEY: ${{ secrets.POSTMAN_API_KEY }}
+          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          POSTMAN_SYNC_ALL: ${{ github.event_name == 'workflow_dispatch' && inputs.sync_all || 'false' }}
