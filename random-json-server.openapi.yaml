@@ -1,8 +1,9 @@
-openapi: 4.0.0
+openapi: 3.0.0
 info:
   title: Random JSON Server API
   version: 1.0.0
   description: A small HTTP API that returns randomly generated JSON payloads.
+invalid:
 servers:
   - url: http://localhost:3000
     description: Local development server
