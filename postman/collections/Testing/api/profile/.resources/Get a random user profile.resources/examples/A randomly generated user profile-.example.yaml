@@ -1,0 +1,58 @@
+$kind: http-example
+name: A randomly generated user profile.
+request:
+  url: "{{baseUrl}}/api/profile"
+  method: GET
+  headers:
+    Accept: application/json
+  body:
+    type: text
+    content: ""
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "id": "ab12cd34",
+        "name": "User-123",
+        "score": 87,
+        "active": true
+      }
+    $type: |-
+      {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 8,
+            "example": "ab12cd34"
+          },
+          "name": {
+            "type": "string",
+            "pattern": "^User-[0-9]{3}$",
+            "example": "User-123"
+          },
+          "score": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "example": 87
+          },
+          "active": {
+            "type": "boolean",
+            "example": true
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "score",
+          "active"
+        ]
+      }
+order: 1000

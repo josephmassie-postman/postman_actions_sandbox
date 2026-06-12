@@ -4,7 +4,7 @@ const { execFileSync } = require('child_process');
 const fs = require('fs/promises');
 const path = require('path');
 
-const DEFAULT_CONFIG_PATH = 'pipeline_configurations/.postman-sync.json';
+const DEFAULT_CONFIG_PATH = '.postman-sync.json';
 const DEFAULT_API_BASE_URL = 'https://api.getpostman.com';
 const DEFAULT_POLL_TIMEOUT_MS = 120000;
 const DEFAULT_POLL_INTERVAL_MS = 3000;
@@ -174,6 +174,10 @@ const resolvePostmanSpecFilePath = (spec, config) => {
   const specPath = toPosixPath(spec.path);
   const syncRoot = toPosixPath(spec.postmanSyncRoot || config.postmanSyncRoot || '');
 
+  if (syncRoot === '.') {
+    return specPath;
+  }
+
   if (syncRoot) {
     const prefix = `${syncRoot}/`;
 
@@ -230,18 +234,10 @@ const pollTask = async (client, task, label) => {
 };
 
 const main = async () => {
-  const apiKey = process.env.POSTMAN_API_KEY;
-
-  if (!apiKey) {
-    throw new Error('POSTMAN_API_KEY is required.');
-  }
-
   const configPath = toPosixPath(
     process.env.POSTMAN_SYNC_CONFIG || DEFAULT_CONFIG_PATH,
   );
   const config = await readJson(resolveRepoPath(configPath));
-  const apiBaseUrl = config.apiBaseUrl || DEFAULT_API_BASE_URL;
-  const client = createPostmanClient(apiKey, apiBaseUrl);
   const changedFiles = getChangedFiles();
   const specs = config.specs || [];
   const specsToSync = specs.filter((spec) =>
@@ -252,6 +248,15 @@ const main = async () => {
     console.log('No configured Postman specs changed. Nothing to sync.');
     return;
   }
+
+  const apiKey = process.env.POSTMAN_API_KEY;
+
+  if (!apiKey) {
+    throw new Error('POSTMAN_API_KEY is required.');
+  }
+
+  const apiBaseUrl = config.apiBaseUrl || DEFAULT_API_BASE_URL;
+  const client = createPostmanClient(apiKey, apiBaseUrl);
 
   for (const spec of specsToSync) {
     assertSpecConfig(spec);

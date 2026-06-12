@@ -1,0 +1,61 @@
+$kind: http-example
+name: Randomly generated system metrics.
+request:
+  url: "{{baseUrl}}/api/metrics"
+  method: GET
+  headers:
+    Accept: application/json
+  body:
+    type: text
+    content: ""
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "requestId": "ef56gh78",
+        "cpuLoad": 0.421,
+        "memoryMb": 1024,
+        "latencyMs": 125
+      }
+    $type: |-
+      {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 8,
+            "example": "ef56gh78"
+          },
+          "cpuLoad": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "example": 0.421
+          },
+          "memoryMb": {
+            "type": "integer",
+            "minimum": 128,
+            "maximum": 4096,
+            "example": 1024
+          },
+          "latencyMs": {
+            "type": "integer",
+            "minimum": 10,
+            "maximum": 500,
+            "example": 125
+          }
+        },
+        "required": [
+          "requestId",
+          "cpuLoad",
+          "memoryMb",
+          "latencyMs"
+        ]
+      }
+order: 1000

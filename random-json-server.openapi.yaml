@@ -1,0 +1,187 @@
+openapi: 3.1.0
+info:
+  title: Random JSON Server API
+  version: 1.0.0
+  description: A small HTTP API that returns randomly generated JSON payloads.
+servers:
+  - url: http://localhost:3000
+    description: Local development server
+paths:
+  /:
+    get:
+      summary: Get service information
+      operationId: getServiceInfo
+      responses:
+        "200":
+          description: Service information and available endpoints.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceInfo"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /api/profile:
+    get:
+      summary: Get a random user profile
+      operationId: getRandomProfile
+      responses:
+        "200":
+          description: A randomly generated user profile.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /api/weather:
+    get:
+      summary: Get random weather data
+      operationId: getRandomWeather
+      responses:
+        "200":
+          description: Randomly generated weather data.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Weather"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /api/metrics:
+    get:
+      summary: Get random system metrics
+      operationId: getRandomMetrics
+      responses:
+        "200":
+          description: Randomly generated system metrics.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Metrics"
+        "404":
+          $ref: "#/components/responses/NotFound"
+components:
+  responses:
+    NotFound:
+      description: The requested route was not found.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    MethodNotAllowed:
+      description: The HTTP method is not supported. Only GET is allowed.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+  schemas:
+    Error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+      additionalProperties: false
+    ServiceInfo:
+      type: object
+      required:
+        - message
+        - endpoints
+      properties:
+        message:
+          type: string
+          example: Simple random JSON server
+        endpoints:
+          type: array
+          items:
+            type: string
+          example:
+            - /api/profile
+            - /api/weather
+            - /api/metrics
+      additionalProperties: false
+    Profile:
+      type: object
+      required:
+        - id
+        - name
+        - score
+        - active
+      properties:
+        id:
+          type: string
+          minLength: 8
+          maxLength: 8
+          example: ab12cd34
+        name:
+          type: string
+          pattern: "^User-[0-9]{3}$"
+          example: User-123
+        score:
+          type: integer
+          minimum: 1
+          maximum: 100
+          example: 87
+        active:
+          type: boolean
+          example: true
+      additionalProperties: false
+    Weather:
+      type: object
+      required:
+        - location
+        - temperatureF
+        - humidity
+        - condition
+      properties:
+        location:
+          type: string
+          pattern: "^City-[0-9]+$"
+          example: City-12
+        temperatureF:
+          type: integer
+          minimum: 40
+          maximum: 100
+          example: 72
+        humidity:
+          type: number
+          minimum: 0.2
+          maximum: 0.9
+          example: 0.63
+        condition:
+          type: string
+          enum:
+            - sunny
+            - cloudy
+            - rainy
+            - windy
+      additionalProperties: false
+    Metrics:
+      type: object
+      required:
+        - requestId
+        - cpuLoad
+        - memoryMb
+        - latencyMs
+      properties:
+        requestId:
+          type: string
+          minLength: 8
+          maxLength: 8
+          example: ef56gh78
+        cpuLoad:
+          type: number
+          minimum: 0
+          maximum: 1
+          example: 0.421
+        memoryMb:
+          type: integer
+          minimum: 128
+          maximum: 4096
+          example: 1024
+        latencyMs:
+          type: integer
+          minimum: 10
+          maximum: 500
+          example: 125
+      additionalProperties: false

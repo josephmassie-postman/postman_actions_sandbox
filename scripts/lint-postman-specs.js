@@ -4,7 +4,7 @@ const { execFileSync } = require('child_process');
 const fs = require('fs/promises');
 const path = require('path');
 
-const DEFAULT_CONFIG_PATH = 'pipeline_configurations/.postman-sync.json';
+const DEFAULT_CONFIG_PATH = '.postman-sync.json';
 const DEFAULT_LINT_FAIL_SEVERITY = 'error';
 const POSTMAN_CLI_BIN = process.env.POSTMAN_CLI_BIN || 'postman';
 

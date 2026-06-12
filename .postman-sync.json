@@ -1,0 +1,19 @@
+{
+  "apiBaseUrl": "https://api.getpostman.com",
+  "postmanSyncRoot": ".",
+  "postmanWorkspaceId": "80a3c108-58c1-49d3-9c06-ace26e9a2f53",
+  "lintFailSeverity": "error",
+  "specs": [
+    {
+      "name": "Random JSON Server API",
+      "path": "random-json-server.openapi.yaml",
+      "postmanSpecId": "94e1a5e1-601a-48b0-a5e3-118e9d77dd46",
+      "postmanSpecFilePath": "random-json-server.openapi.yaml",
+      "watchPaths": [
+        "src/server.js",
+        ".postman/resources.yaml",
+        ".postman/workflows.yaml"
+      ]
+    }
+  ]
+}
