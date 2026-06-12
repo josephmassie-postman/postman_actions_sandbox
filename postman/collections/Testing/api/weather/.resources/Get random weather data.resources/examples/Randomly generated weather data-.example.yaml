@@ -1,0 +1,63 @@
+$kind: http-example
+name: Randomly generated weather data.
+request:
+  url: "{{baseUrl}}/api/weather"
+  method: GET
+  headers:
+    Accept: application/json
+  body:
+    type: text
+    content: ""
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "location": "City-12",
+        "temperatureF": 72,
+        "humidity": 0.63,
+        "condition": "rainy"
+      }
+    $type: |-
+      {
+        "type": "object",
+        "properties": {
+          "location": {
+            "type": "string",
+            "pattern": "^City-[0-9]+$",
+            "example": "City-12"
+          },
+          "temperatureF": {
+            "type": "integer",
+            "minimum": 40,
+            "maximum": 100,
+            "example": 72
+          },
+          "humidity": {
+            "type": "number",
+            "minimum": 0.2,
+            "maximum": 0.9,
+            "example": 0.63
+          },
+          "condition": {
+            "type": "string",
+            "enum": [
+              "sunny",
+              "cloudy",
+              "rainy",
+              "windy"
+            ]
+          }
+        },
+        "required": [
+          "location",
+          "temperatureF",
+          "humidity",
+          "condition"
+        ]
+      }
+order: 1000

@@ -1,0 +1,52 @@
+$kind: http-example
+name: Service information and available endpoints.
+request:
+  url: "{{baseUrl}}/"
+  method: GET
+  headers:
+    Accept: application/json
+  body:
+    type: text
+    content: ""
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "Simple random JSON server",
+        "endpoints": [
+          "/api/profile",
+          "/api/weather",
+          "/api/metrics"
+        ]
+      }
+    $type: |-
+      {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "example": "Simple random JSON server"
+          },
+          "endpoints": {
+            "type": "array",
+            "example": [
+              "/api/profile",
+              "/api/weather",
+              "/api/metrics"
+            ],
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "message",
+          "endpoints"
+        ]
+      }
+order: 1000

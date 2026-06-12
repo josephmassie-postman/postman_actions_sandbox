@@ -1,0 +1,4 @@
+$kind: collection
+description: A small HTTP API that returns randomly generated JSON payloads.
+variables:
+  baseUrl: http://localhost:3000
