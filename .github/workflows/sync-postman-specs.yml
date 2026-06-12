@@ -2,13 +2,8 @@ name: Sync Postman Specs
 
 on:
   push:
-    paths:
-      - ".postman-sync.json"
-      - "scripts/lint-postman-specs.js"
-      - "scripts/sync-postman-specs.js"
-      - "**/*.yaml"
-      - "**/*.yml"
-  pull_request:
+    branches:
+      - main
     paths:
       - ".postman-sync.json"
       - "scripts/lint-postman-specs.js"
