@@ -26,6 +26,24 @@ const routes = {
     memoryMb: randomInt(128, 4096),
     latencyMs: randomInt(10, 500),
   }),
+  '/api/orders': () => ({
+    orderId: `ORD-${randomInt(100000, 999999)}`,
+    itemCount: randomInt(1, 8),
+    totalUsd: randomFloat(9.99, 499.99),
+    status: ['processing', 'shipped', 'delivered', 'cancelled'][randomInt(0, 3)],
+  }),
+  '/api/inventory': () => ({
+    sku: `SKU-${randomInt(1000, 9999)}`,
+    inStock: randomInt(0, 500),
+    reorderLevel: randomInt(10, 150),
+    warehouse: `WH-${randomInt(1, 5)}`,
+  }),
+  '/api/notifications': () => ({
+    notificationId: randomId(),
+    channel: ['email', 'sms', 'push'][randomInt(0, 2)],
+    priority: ['low', 'medium', 'high'][randomInt(0, 2)],
+    sent: Math.random() > 0.2,
+  }),
 };
 
 const sendJson = (res, statusCode, body) => {

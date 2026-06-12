@@ -59,6 +59,45 @@ paths:
                 $ref: "#/components/schemas/Metrics"
         "404":
           $ref: "#/components/responses/NotFound"
+  /api/orders:
+    get:
+      summary: Get random order data
+      operationId: getRandomOrder
+      responses:
+        "200":
+          description: Randomly generated order data.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /api/inventory:
+    get:
+      summary: Get random inventory data
+      operationId: getRandomInventory
+      responses:
+        "200":
+          description: Randomly generated inventory data.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Inventory"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /api/notifications:
+    get:
+      summary: Get random notification status
+      operationId: getRandomNotification
+      responses:
+        "200":
+          description: Randomly generated notification status.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Notification"
+        "404":
+          $ref: "#/components/responses/NotFound"
 components:
   responses:
     NotFound:
@@ -99,6 +138,9 @@ components:
             - /api/profile
             - /api/weather
             - /api/metrics
+            - /api/orders
+            - /api/inventory
+            - /api/notifications
       additionalProperties: false
     Profile:
       type: object
@@ -184,4 +226,90 @@ components:
           minimum: 10
           maximum: 500
           example: 125
+      additionalProperties: false
+    Order:
+      type: object
+      required:
+        - orderId
+        - itemCount
+        - totalUsd
+        - status
+      properties:
+        orderId:
+          type: string
+          pattern: "^ORD-[0-9]{6}$"
+          example: ORD-123456
+        itemCount:
+          type: integer
+          minimum: 1
+          maximum: 8
+          example: 3
+        totalUsd:
+          type: number
+          minimum: 9.99
+          maximum: 499.99
+          example: 149.95
+        status:
+          type: string
+          enum:
+            - processing
+            - shipped
+            - delivered
+            - cancelled
+      additionalProperties: false
+    Inventory:
+      type: object
+      required:
+        - sku
+        - inStock
+        - reorderLevel
+        - warehouse
+      properties:
+        sku:
+          type: string
+          pattern: "^SKU-[0-9]{4}$"
+          example: SKU-4821
+        inStock:
+          type: integer
+          minimum: 0
+          maximum: 500
+          example: 238
+        reorderLevel:
+          type: integer
+          minimum: 10
+          maximum: 150
+          example: 75
+        warehouse:
+          type: string
+          pattern: "^WH-[1-5]$"
+          example: WH-3
+      additionalProperties: false
+    Notification:
+      type: object
+      required:
+        - notificationId
+        - channel
+        - priority
+        - sent
+      properties:
+        notificationId:
+          type: string
+          minLength: 8
+          maxLength: 8
+          example: z9x8c7v6
+        channel:
+          type: string
+          enum:
+            - email
+            - sms
+            - push
+        priority:
+          type: string
+          enum:
+            - low
+            - medium
+            - high
+        sent:
+          type: boolean
+          example: true
       additionalProperties: false
