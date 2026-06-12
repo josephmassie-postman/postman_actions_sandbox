@@ -1,0 +1,12 @@
+owner: "53497454"
+team: "13347347"
+lastUpdatedBy: "53497454"
+lastRevision: 1781305692000
+name: Test Mock
+color: null
+values:
+  - key: baseUrl
+    value: https://73a616a3-4a81-4e49-96f3-b720468e3776.mock.pstmn.io
+    enabled: true
+createdAt: 2026-06-12T23:07:49.000Z
+updatedAt: 2026-06-12T23:08:12.000Z

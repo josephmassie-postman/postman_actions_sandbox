@@ -6,5 +6,18 @@ headers:
 body:
   type: text
   content: ""
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Profile is an object", function () {
+          var json = pm.response.json();
+          pm.expect(json).to.be.an("object");
+      });
+
+      pm.test("Profile contains expected fields", function () {
+          var json = pm.response.json();
+          pm.expect(json).to.have.property("name");
+      });
+    language: text/javascript
 examples: ./.resources/Get a random user profile.resources/examples
 order: 1000
