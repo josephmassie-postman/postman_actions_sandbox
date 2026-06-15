@@ -12,11 +12,7 @@ on:
       - "postman/collections/**"
       - "postman/environments/**"
   workflow_dispatch:
-    inputs:
-      sync_all:
-        description: "Sync all Postman assets from main"
-        required: false
-        default: "true"
+    inputs: {}
 
 jobs:
   sync-postman-specs:
@@ -37,43 +33,12 @@ jobs:
       - name: Install Postman CLI
         run: npm install -g postman-cli
 
-      - name: Detect spec changes
-        id: detect-spec-changes
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.sync_all }}" = "true" ]; then
-            echo "has_spec_changes=true" >> "$GITHUB_OUTPUT"
-            echo "Manual run requested full sync."
-            exit 0
-          fi
-
-          BASE_SHA="${{ github.event.before }}"
-          HEAD_SHA="${{ github.sha }}"
-
-          if [ -z "$BASE_SHA" ] || [ "$BASE_SHA" = "0000000000000000000000000000000000000000" ]; then
-            echo "has_spec_changes=true" >> "$GITHUB_OUTPUT"
-            echo "No valid base SHA found; defaulting to run sync."
-            exit 0
-          fi
-
-          changed_files="$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")"
-          if printf '%s\n' "$changed_files" | rg -q '^(postman/specs/.*\.(yaml|yml)|postman/collections/|postman/environments/|\.postman/resources.yaml|\.postman/workflows.yaml)'; then
-            echo "has_spec_changes=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "has_spec_changes=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Skip sync when no spec changes detected
-        if: steps.detect-spec-changes.outputs.has_spec_changes != 'true'
-        run: echo "No Postman asset changes detected; skipping lint and sync."
-
       - name: Authenticate Postman CLI
-        if: steps.detect-spec-changes.outputs.has_spec_changes == 'true'
         run: postman login --with-api-key "$POSTMAN_API_KEY"
         env:
           POSTMAN_API_KEY: ${{ secrets.POSTMAN_API_KEY }}
 
       - name: Lint all local OpenAPI specs
-        if: steps.detect-spec-changes.outputs.has_spec_changes == 'true'
         run: |
           set +e
           set -o pipefail
@@ -98,7 +63,6 @@ jobs:
           exit "$overall_exit"
 
       - name: Resolve workspace id
-        if: steps.detect-spec-changes.outputs.has_spec_changes == 'true'
         id: resolve-workspace
         run: |
           workspace_id="$(ruby -ryaml -e '
@@ -115,7 +79,6 @@ jobs:
           echo "workspace_id=${workspace_id}" >> "$GITHUB_OUTPUT"
 
       - name: Push current main assets to Postman cloud (CLI)
-        if: steps.detect-spec-changes.outputs.has_spec_changes == 'true'
         run: |
           set +e
           set -o pipefail
@@ -133,7 +96,6 @@ jobs:
           exit "$push_exit"
 
       - name: Pull all specs from Postman cloud
-        if: steps.detect-spec-changes.outputs.has_spec_changes == 'true'
         run: |
           set +e
           set -o pipefail
@@ -173,7 +135,6 @@ jobs:
           POSTMAN_WORKSPACE_ID: ${{ steps.resolve-workspace.outputs.workspace_id }}
 
       - name: Sync all specs with associated collections
-        if: steps.detect-spec-changes.outputs.has_spec_changes == 'true'
         run: |
           node <<'EOF'
           const fs = require('fs');
