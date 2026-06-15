@@ -89,6 +89,21 @@ paths:
                 $ref: '#/components/schemas/Error'
               example:
                 error: Query parameter q is required
+  /api/friends/stats:
+    get:
+      summary: Get friend list statistics
+      operationId: getFriendStats
+      responses:
+        '200':
+          description: Aggregated stats for the current friend list.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FriendStats'
+              example:
+                totalFriends: 24
+                activeFriends: 18
+                inactiveFriends: 6
 components:
   schemas:
     Friend:
@@ -128,4 +143,24 @@ components:
       properties:
         error:
           type: string
+      additionalProperties: false
+    FriendStats:
+      type: object
+      required:
+        - totalFriends
+        - activeFriends
+        - inactiveFriends
+      properties:
+        totalFriends:
+          type: integer
+          minimum: 0
+          example: 24
+        activeFriends:
+          type: integer
+          minimum: 0
+          example: 18
+        inactiveFriends:
+          type: integer
+          minimum: 0
+          example: 6
       additionalProperties: false
