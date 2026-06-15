@@ -5,15 +5,16 @@ on:
     branches:
       - main
     paths:
-      - ".postman-sync.json"
-      - "scripts/lint-postman-specs.js"
-      - "scripts/sync-postman-specs.js"
-      - "**/*.yaml"
-      - "**/*.yml"
+      - ".postman/resources.yaml"
+      - ".postman/workflows.yaml"
+      - "postman/specs/**/*.yaml"
+      - "postman/specs/**/*.yml"
+      - "postman/collections/**"
+      - "postman/environments/**"
   workflow_dispatch:
     inputs:
       sync_all:
-        description: "Sync every spec in .postman-sync.json"
+        description: "Sync all Postman assets from main"
         required: false
         default: "true"
 
@@ -26,6 +27,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ github.event_name == 'workflow_dispatch' && 'main' || github.ref }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -46,7 +48,6 @@ jobs:
 
           BASE_SHA="${{ github.event.before }}"
           HEAD_SHA="${{ github.sha }}"
-          export BASE_SHA HEAD_SHA
 
           if [ -z "$BASE_SHA" ] || [ "$BASE_SHA" = "0000000000000000000000000000000000000000" ]; then
             echo "has_spec_changes=true" >> "$GITHUB_OUTPUT"
@@ -54,38 +55,16 @@ jobs:
             exit 0
           fi
 
-          node <<'EOF' >> "$GITHUB_OUTPUT"
-          const { execFileSync } = require('child_process');
-          const { readFileSync, existsSync } = require('fs');
-
-          const configPath = '.postman-sync.json';
-          if (!existsSync(configPath)) {
-            console.log('No .postman-sync.json found; skipping sync.');
-            process.stdout.write('has_spec_changes=false\n');
-            process.exit(0);
-          }
-
-          const config = JSON.parse(readFileSync(configPath, 'utf8'));
-          const specs = config.specs || [];
-          const changedFiles = new Set(
-            execFileSync('git', ['diff', '--name-only', process.env.BASE_SHA, process.env.HEAD_SHA], {
-              encoding: 'utf8',
-            })
-              .split('\n')
-              .filter(Boolean),
-          );
-
-          const hasSpecChanges = specs.some((spec) => {
-            const watchedPaths = [spec.path, ...(spec.watchPaths || []), configPath];
-            return watchedPaths.some((watchedPath) => changedFiles.has(watchedPath));
-          });
-
-          process.stdout.write(`has_spec_changes=${hasSpecChanges ? 'true' : 'false'}\n`);
-          EOF
+          changed_files="$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")"
+          if printf '%s\n' "$changed_files" | rg -q '^(postman/specs/.*\.(yaml|yml)|postman/collections/|postman/environments/|\.postman/resources.yaml|\.postman/workflows.yaml)'; then
+            echo "has_spec_changes=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_spec_changes=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Skip sync when no spec changes detected
         if: steps.detect-spec-changes.outputs.has_spec_changes != 'true'
-        run: echo "No configured spec changes detected; skipping lint and sync."
+        run: echo "No Postman asset changes detected; skipping lint and sync."
 
       - name: Authenticate Postman CLI
         if: steps.detect-spec-changes.outputs.has_spec_changes == 'true'
@@ -93,19 +72,249 @@ jobs:
         env:
           POSTMAN_API_KEY: ${{ secrets.POSTMAN_API_KEY }}
 
-      - name: Lint changed OpenAPI specs
+      - name: Lint all local OpenAPI specs
         if: steps.detect-spec-changes.outputs.has_spec_changes == 'true'
-        run: node scripts/lint-postman-specs.js
-        env:
-          BASE_SHA: ${{ github.event.before }}
-          HEAD_SHA: ${{ github.sha }}
-          POSTMAN_SYNC_ALL: ${{ github.event_name == 'workflow_dispatch' && inputs.sync_all || 'false' }}
+        run: |
+          set +e
+          set -o pipefail
 
-      - name: Sync changed OpenAPI specs to Postman
+          rg --files "postman/specs" | rg '\.(yaml|yml)$' > local-spec-list.txt
+
+          if [ ! -s local-spec-list.txt ]; then
+            echo "No local spec files found under postman/specs."
+            exit 1
+          fi
+
+          overall_exit=0
+          while IFS= read -r spec_path; do
+            echo "Linting ${spec_path}..."
+            postman spec lint "${spec_path}" --fail-severity error
+            lint_exit=$?
+            if [ "$lint_exit" -ne 0 ]; then
+              overall_exit=1
+            fi
+          done < local-spec-list.txt
+
+          exit "$overall_exit"
+
+      - name: Resolve workspace id
         if: steps.detect-spec-changes.outputs.has_spec_changes == 'true'
-        run: node scripts/sync-postman-specs.js
+        id: resolve-workspace
+        run: |
+          workspace_id="$(ruby -ryaml -e '
+            data = YAML.load_file(".postman/resources.yaml") || {}
+            id = data.fetch("workspace", {})["id"]
+            puts id if id
+          ')"
+
+          if [ -z "$workspace_id" ]; then
+            echo "Missing workspace.id in .postman/resources.yaml"
+            exit 1
+          fi
+
+          echo "workspace_id=${workspace_id}" >> "$GITHUB_OUTPUT"
+
+      - name: Push current main assets to Postman cloud (CLI)
+        if: steps.detect-spec-changes.outputs.has_spec_changes == 'true'
+        run: |
+          set +e
+          set -o pipefail
+
+          echo "Pushing local Postman assets from main snapshot to cloud..."
+          postman workspace push --yes 2>&1 | tee postman-cli-sync.log
+          push_exit=${PIPESTATUS[0]}
+
+          echo "## Postman CLI Workspace Push Results" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo '```text' >> "$GITHUB_STEP_SUMMARY"
+          cat postman-cli-sync.log >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+          exit "$push_exit"
+
+      - name: Pull all specs from Postman cloud
+        if: steps.detect-spec-changes.outputs.has_spec_changes == 'true'
+        run: |
+          set +e
+          set -o pipefail
+
+          curl -sS \
+            -H "X-Api-Key: $POSTMAN_API_KEY" \
+            -H "Accept: application/json" \
+            "https://api.getpostman.com/specs?workspaceId=${POSTMAN_WORKSPACE_ID}" \
+            > postman-specs.json
+          curl_exit=$?
+
+          if [ "$curl_exit" -ne 0 ]; then
+            echo "Failed to fetch specs from Postman API."
+            exit "$curl_exit"
+          fi
+
+          node <<'EOF'
+          const fs = require('fs');
+
+          const raw = fs.readFileSync('postman-specs.json', 'utf8');
+          const payload = raw ? JSON.parse(raw) : {};
+          const specs = payload.specs || payload.data || [];
+
+          if (!Array.isArray(specs)) {
+            throw new Error('Unexpected response from GET /specs endpoint.');
+          }
+
+          console.log(`Found ${specs.length} specs in workspace.`);
+          fs.writeFileSync(
+            process.env.GITHUB_STEP_SUMMARY,
+            `## Postman Workspace Specs\n\nFound **${specs.length}** specs via \`GET /specs?workspaceId=${process.env.POSTMAN_WORKSPACE_ID}\`.\n\n`,
+            { flag: 'a' },
+          );
+          EOF
         env:
           POSTMAN_API_KEY: ${{ secrets.POSTMAN_API_KEY }}
-          BASE_SHA: ${{ github.event.before }}
-          HEAD_SHA: ${{ github.sha }}
-          POSTMAN_SYNC_ALL: ${{ github.event_name == 'workflow_dispatch' && inputs.sync_all || 'false' }}
+          POSTMAN_WORKSPACE_ID: ${{ steps.resolve-workspace.outputs.workspace_id }}
+
+      - name: Sync all specs with associated collections
+        if: steps.detect-spec-changes.outputs.has_spec_changes == 'true'
+        run: |
+          node <<'EOF'
+          const fs = require('fs');
+
+          const apiKey = process.env.POSTMAN_API_KEY;
+          const apiBaseUrl = 'https://api.getpostman.com';
+          const timeoutMs = Number(process.env.POSTMAN_SYNC_POLL_TIMEOUT_MS || 120000);
+          const intervalMs = Number(process.env.POSTMAN_SYNC_POLL_INTERVAL_MS || 3000);
+
+          const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+          const request = async (method, endpoint) => {
+            const url = endpoint.startsWith('http') ? endpoint : `${apiBaseUrl}${endpoint}`;
+            const response = await fetch(url, {
+              method,
+              headers: {
+                'X-Api-Key': apiKey,
+                Accept: 'application/json',
+              },
+            });
+            const text = await response.text();
+            let payload = {};
+            if (text) {
+              try {
+                payload = JSON.parse(text);
+              } catch {
+                payload = { raw: text };
+              }
+            }
+            if (!response.ok) {
+              const detail = payload?.error?.message || payload?.message || text;
+              throw new Error(`${method} ${url} failed (${response.status}): ${detail}`);
+            }
+            return { payload, response };
+          };
+
+          const extractCollections = (payload) => {
+            if (Array.isArray(payload)) return payload;
+            for (const key of ['collections', 'data', 'elements', 'items', 'generations']) {
+              if (Array.isArray(payload?.[key])) return payload[key];
+            }
+            if (Array.isArray(payload?.spec?.collections)) return payload.spec.collections;
+            if (payload?.collection || payload?.collectionUid || payload?.uid) return [payload];
+            return [];
+          };
+
+          const collectionUidFor = (collection) =>
+            collection.uid ||
+            collection.collectionUid ||
+            collection.collectionUID ||
+            collection.entityUid ||
+            collection.entityUID ||
+            collection.id ||
+            collection.collection?.uid ||
+            collection.collection?.collectionUid ||
+            collection.collection?.id ||
+            collection.output?.collectionUid ||
+            collection.result?.collectionUid;
+
+          const pollTask = async (task, label) => {
+            const taskUrl =
+              task?.url ||
+              task?.task?.url ||
+              task?.taskUrl ||
+              task?.meta?.task?.url ||
+              task?.data?.url;
+
+            if (!taskUrl) {
+              throw new Error(`No async task URL returned for ${label}: ${JSON.stringify(task)}`);
+            }
+
+            const deadline = Date.now() + timeoutMs;
+            while (Date.now() < deadline) {
+              const { payload: status } = await request('GET', taskUrl);
+              const state = String(
+                status.status || status.state || status.task?.status || '',
+              ).toLowerCase();
+
+              if (['success', 'successful', 'completed', 'complete'].includes(state)) {
+                console.log(`Sync completed for ${label}.`);
+                return;
+              }
+
+              if (['failed', 'failure', 'error'].includes(state)) {
+                throw new Error(`Sync failed for ${label}: ${JSON.stringify(status)}`);
+              }
+
+              await sleep(intervalMs);
+            }
+
+            throw new Error(`Timed out waiting for sync task for ${label}.`);
+          };
+
+          const raw = fs.readFileSync('postman-specs.json', 'utf8');
+          const payload = raw ? JSON.parse(raw) : {};
+          const specs = payload.specs || payload.data || [];
+          if (!Array.isArray(specs)) {
+            throw new Error('Unexpected response shape in postman-specs.json');
+          }
+
+          for (const spec of specs) {
+            const specId = spec.id || spec.specId || spec.uid;
+            const specName = spec.name || specId;
+            if (!specId) continue;
+
+            const { payload: collectionsPayload } = await request(
+              'GET',
+              `/specs/${specId}/generations/collection?limit=100`,
+            );
+            const collectionUids = extractCollections(collectionsPayload)
+              .map(collectionUidFor)
+              .filter(Boolean);
+
+            if (collectionUids.length === 0) {
+              console.log(`No generated collections for ${specName}; skipping.`);
+              continue;
+            }
+
+            for (const collectionUid of [...new Set(collectionUids)]) {
+              const label = `${specName} -> ${collectionUid}`;
+              console.log(`Syncing ${label}...`);
+              const { payload: taskPayload, response } = await request(
+                'PUT',
+                `/specs/${specId}/synchronizations?collectionUid=${encodeURIComponent(collectionUid)}`,
+              );
+
+              const task = {
+                ...taskPayload,
+                url:
+                  taskPayload?.url ||
+                  taskPayload?.task?.url ||
+                  taskPayload?.taskUrl ||
+                  taskPayload?.meta?.task?.url ||
+                  taskPayload?.data?.url ||
+                  response.headers.get('location') ||
+                  response.headers.get('content-location'),
+              };
+
+              await pollTask(task, label);
+            }
+          }
+          EOF
+        env:
+          POSTMAN_API_KEY: ${{ secrets.POSTMAN_API_KEY }}

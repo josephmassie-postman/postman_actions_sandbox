@@ -66,6 +66,15 @@ jobs:
             ')"
           fi
 
+          if [ -n "$environment_path" ]; then
+            environment_path="$(ruby -e '
+              raw = ARGV[0]
+              candidates = [raw, File.expand_path(raw, ".postman")]
+              resolved = candidates.find { |candidate| File.file?(candidate) }
+              puts(resolved || raw)
+            ' "$environment_path")"
+          fi
+
           if [ -n "$environment_path" ] && [ ! -f "$environment_path" ]; then
             echo "Configured environment file not found: $environment_path"
             echo "## Postman Collection Test Results" >> "$GITHUB_STEP_SUMMARY"
