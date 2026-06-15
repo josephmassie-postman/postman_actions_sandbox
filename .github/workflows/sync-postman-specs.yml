@@ -134,143 +134,150 @@ jobs:
           node <<'EOF'
           const fs = require('fs');
 
-          const apiKey = process.env.POSTMAN_API_KEY;
-          const apiBaseUrl = 'https://api.getpostman.com';
-          const timeoutMs = Number(process.env.POSTMAN_SYNC_POLL_TIMEOUT_MS || 120000);
-          const intervalMs = Number(process.env.POSTMAN_SYNC_POLL_INTERVAL_MS || 3000);
+          const main = async () => {
+            const apiKey = process.env.POSTMAN_API_KEY;
+            const apiBaseUrl = 'https://api.getpostman.com';
+            const timeoutMs = Number(process.env.POSTMAN_SYNC_POLL_TIMEOUT_MS || 120000);
+            const intervalMs = Number(process.env.POSTMAN_SYNC_POLL_INTERVAL_MS || 3000);
 
-          const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+            const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-          const request = async (method, endpoint) => {
-            const url = endpoint.startsWith('http') ? endpoint : `${apiBaseUrl}${endpoint}`;
-            const response = await fetch(url, {
-              method,
-              headers: {
-                'X-Api-Key': apiKey,
-                Accept: 'application/json',
-              },
-            });
-            const text = await response.text();
-            let payload = {};
-            if (text) {
-              try {
-                payload = JSON.parse(text);
-              } catch {
-                payload = { raw: text };
+            const request = async (method, endpoint) => {
+              const url = endpoint.startsWith('http') ? endpoint : `${apiBaseUrl}${endpoint}`;
+              const response = await fetch(url, {
+                method,
+                headers: {
+                  'X-Api-Key': apiKey,
+                  Accept: 'application/json',
+                },
+              });
+              const text = await response.text();
+              let payload = {};
+              if (text) {
+                try {
+                  payload = JSON.parse(text);
+                } catch {
+                  payload = { raw: text };
+                }
               }
-            }
-            if (!response.ok) {
-              const detail = payload?.error?.message || payload?.message || text;
-              throw new Error(`${method} ${url} failed (${response.status}): ${detail}`);
-            }
-            return { payload, response };
-          };
+              if (!response.ok) {
+                const detail = payload?.error?.message || payload?.message || text;
+                throw new Error(`${method} ${url} failed (${response.status}): ${detail}`);
+              }
+              return { payload, response };
+            };
 
-          const extractCollections = (payload) => {
-            if (Array.isArray(payload)) return payload;
-            for (const key of ['collections', 'data', 'elements', 'items', 'generations']) {
-              if (Array.isArray(payload?.[key])) return payload[key];
-            }
-            if (Array.isArray(payload?.spec?.collections)) return payload.spec.collections;
-            if (payload?.collection || payload?.collectionUid || payload?.uid) return [payload];
-            return [];
-          };
+            const extractCollections = (payload) => {
+              if (Array.isArray(payload)) return payload;
+              for (const key of ['collections', 'data', 'elements', 'items', 'generations']) {
+                if (Array.isArray(payload?.[key])) return payload[key];
+              }
+              if (Array.isArray(payload?.spec?.collections)) return payload.spec.collections;
+              if (payload?.collection || payload?.collectionUid || payload?.uid) return [payload];
+              return [];
+            };
 
-          const collectionUidFor = (collection) =>
-            collection.uid ||
-            collection.collectionUid ||
-            collection.collectionUID ||
-            collection.entityUid ||
-            collection.entityUID ||
-            collection.id ||
-            collection.collection?.uid ||
-            collection.collection?.collectionUid ||
-            collection.collection?.id ||
-            collection.output?.collectionUid ||
-            collection.result?.collectionUid;
+            const collectionUidFor = (collection) =>
+              collection.uid ||
+              collection.collectionUid ||
+              collection.collectionUID ||
+              collection.entityUid ||
+              collection.entityUID ||
+              collection.id ||
+              collection.collection?.uid ||
+              collection.collection?.collectionUid ||
+              collection.collection?.id ||
+              collection.output?.collectionUid ||
+              collection.result?.collectionUid;
 
-          const pollTask = async (task, label) => {
-            const taskUrl =
-              task?.url ||
-              task?.task?.url ||
-              task?.taskUrl ||
-              task?.meta?.task?.url ||
-              task?.data?.url;
+            const pollTask = async (task, label) => {
+              const taskUrl =
+                task?.url ||
+                task?.task?.url ||
+                task?.taskUrl ||
+                task?.meta?.task?.url ||
+                task?.data?.url;
 
-            if (!taskUrl) {
-              throw new Error(`No async task URL returned for ${label}: ${JSON.stringify(task)}`);
-            }
-
-            const deadline = Date.now() + timeoutMs;
-            while (Date.now() < deadline) {
-              const { payload: status } = await request('GET', taskUrl);
-              const state = String(
-                status.status || status.state || status.task?.status || '',
-              ).toLowerCase();
-
-              if (['success', 'successful', 'completed', 'complete'].includes(state)) {
-                console.log(`Sync completed for ${label}.`);
-                return;
+              if (!taskUrl) {
+                throw new Error(`No async task URL returned for ${label}: ${JSON.stringify(task)}`);
               }
 
-              if (['failed', 'failure', 'error'].includes(state)) {
-                throw new Error(`Sync failed for ${label}: ${JSON.stringify(status)}`);
+              const deadline = Date.now() + timeoutMs;
+              while (Date.now() < deadline) {
+                const { payload: status } = await request('GET', taskUrl);
+                const state = String(
+                  status.status || status.state || status.task?.status || '',
+                ).toLowerCase();
+
+                if (['success', 'successful', 'completed', 'complete'].includes(state)) {
+                  console.log(`Sync completed for ${label}.`);
+                  return;
+                }
+
+                if (['failed', 'failure', 'error'].includes(state)) {
+                  throw new Error(`Sync failed for ${label}: ${JSON.stringify(status)}`);
+                }
+
+                await sleep(intervalMs);
               }
 
-              await sleep(intervalMs);
+              throw new Error(`Timed out waiting for sync task for ${label}.`);
+            };
+
+            const raw = fs.readFileSync('postman-specs.json', 'utf8');
+            const payload = raw ? JSON.parse(raw) : {};
+            const specs = payload.specs || payload.data || [];
+            if (!Array.isArray(specs)) {
+              throw new Error('Unexpected response shape in postman-specs.json');
             }
 
-            throw new Error(`Timed out waiting for sync task for ${label}.`);
-          };
+            for (const spec of specs) {
+              const specId = spec.id || spec.specId || spec.uid;
+              const specName = spec.name || specId;
+              if (!specId) continue;
 
-          const raw = fs.readFileSync('postman-specs.json', 'utf8');
-          const payload = raw ? JSON.parse(raw) : {};
-          const specs = payload.specs || payload.data || [];
-          if (!Array.isArray(specs)) {
-            throw new Error('Unexpected response shape in postman-specs.json');
-          }
-
-          for (const spec of specs) {
-            const specId = spec.id || spec.specId || spec.uid;
-            const specName = spec.name || specId;
-            if (!specId) continue;
-
-            const { payload: collectionsPayload } = await request(
-              'GET',
-              `/specs/${specId}/generations/collection?limit=100`,
-            );
-            const collectionUids = extractCollections(collectionsPayload)
-              .map(collectionUidFor)
-              .filter(Boolean);
-
-            if (collectionUids.length === 0) {
-              console.log(`No generated collections for ${specName}; skipping.`);
-              continue;
-            }
-
-            for (const collectionUid of [...new Set(collectionUids)]) {
-              const label = `${specName} -> ${collectionUid}`;
-              console.log(`Syncing ${label}...`);
-              const { payload: taskPayload, response } = await request(
-                'PUT',
-                `/specs/${specId}/synchronizations?collectionUid=${encodeURIComponent(collectionUid)}`,
+              const { payload: collectionsPayload } = await request(
+                'GET',
+                `/specs/${specId}/generations/collection?limit=100`,
               );
+              const collectionUids = extractCollections(collectionsPayload)
+                .map(collectionUidFor)
+                .filter(Boolean);
 
-              const task = {
-                ...taskPayload,
-                url:
-                  taskPayload?.url ||
-                  taskPayload?.task?.url ||
-                  taskPayload?.taskUrl ||
-                  taskPayload?.meta?.task?.url ||
-                  taskPayload?.data?.url ||
-                  response.headers.get('location') ||
-                  response.headers.get('content-location'),
-              };
+              if (collectionUids.length === 0) {
+                console.log(`No generated collections for ${specName}; skipping.`);
+                continue;
+              }
 
-              await pollTask(task, label);
+              for (const collectionUid of [...new Set(collectionUids)]) {
+                const label = `${specName} -> ${collectionUid}`;
+                console.log(`Syncing ${label}...`);
+                const { payload: taskPayload, response } = await request(
+                  'PUT',
+                  `/specs/${specId}/synchronizations?collectionUid=${encodeURIComponent(collectionUid)}`,
+                );
+
+                const task = {
+                  ...taskPayload,
+                  url:
+                    taskPayload?.url ||
+                    taskPayload?.task?.url ||
+                    taskPayload?.taskUrl ||
+                    taskPayload?.meta?.task?.url ||
+                    taskPayload?.data?.url ||
+                    response.headers.get('location') ||
+                    response.headers.get('content-location'),
+                };
+
+                await pollTask(task, label);
+              }
             }
-          }
+          };
+
+          main().catch((error) => {
+            console.error(error.message);
+            process.exitCode = 1;
+          });
           EOF
         env:
           POSTMAN_API_KEY: ${{ secrets.POSTMAN_API_KEY }}
