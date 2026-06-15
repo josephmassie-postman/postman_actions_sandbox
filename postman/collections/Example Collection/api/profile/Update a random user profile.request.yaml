@@ -1,0 +1,7 @@
+$kind: http-request
+url: "{{baseUrl}}/api/profile"
+method: PATCH
+headers:
+  Accept: application/json
+examples: ./.resources/Update a random user profile.resources/examples
+order: 2000
