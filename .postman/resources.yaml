@@ -5,8 +5,10 @@ localResources:
 cloudResources:
   collections:
     ../postman/collections/Example Collection: 53497454-20da91cc-977e-4427-9f67-590e9aa4cc10
+    ../postman/collections/Friends API: 53497454-ab1f004a-009d-4bce-8a8f-f0570b4bcba2
   specs:
     ../postman/specs/Testing/example_spec.yaml: a5104d5a-0916-402b-a69e-ecea057ef6a8
+    ../postman/specs/Testing/friend-list-mock.openapi.yaml: d006b18b-8213-4384-b5f2-e7996045149c
   environments:
     ../postman/environments/Test Mock.environment.yaml: 53497454-54615aff-4222-4322-96c8-01d12d6f1244
     ../postman/environments/LOCAL.environment.yaml: 53497454-c646e7fe-1cc6-4b29-a9e0-63af9728d0f9
