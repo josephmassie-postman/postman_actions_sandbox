@@ -254,7 +254,7 @@ jobs:
                 console.log(`Syncing ${label}...`);
                 const { payload: taskPayload, response } = await request(
                   'PUT',
-                  `/specs/${specId}/synchronizations?collectionUid=${encodeURIComponent(collectionUid)}`,
+                  `/collections/${encodeURIComponent(collectionUid)}/synchronizations?specId=${specId}`,
                 );
 
                 const task = {
