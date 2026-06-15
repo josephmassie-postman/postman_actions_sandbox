@@ -1,0 +1,10 @@
+$kind: http-request
+url: "{{baseUrl}}/api/inventory"
+method: GET
+headers:
+  Accept: application/json
+body:
+  type: text
+  content: ""
+examples: ./.resources/Get random inventory data.resources/examples
+order: 1000

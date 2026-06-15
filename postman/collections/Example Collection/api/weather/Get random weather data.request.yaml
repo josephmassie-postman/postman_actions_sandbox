@@ -1,0 +1,10 @@
+$kind: http-request
+url: "{{baseUrl}}/api/weather"
+method: GET
+headers:
+  Accept: application/json
+body:
+  type: text
+  content: ""
+examples: ./.resources/Get random weather data.resources/examples
+order: 1000

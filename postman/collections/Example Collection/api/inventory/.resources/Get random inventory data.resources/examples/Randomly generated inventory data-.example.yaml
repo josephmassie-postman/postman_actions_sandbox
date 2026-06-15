@@ -1,0 +1,59 @@
+$kind: http-example
+name: Randomly generated inventory data.
+request:
+  url: "{{baseUrl}}/api/inventory"
+  method: GET
+  headers:
+    Accept: application/json
+  body:
+    type: text
+    content: ""
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "sku": "SKU-4821",
+        "inStock": 238,
+        "reorderLevel": 75,
+        "warehouse": "WH-3"
+      }
+    $type: |-
+      {
+        "type": "object",
+        "properties": {
+          "sku": {
+            "type": "string",
+            "pattern": "^SKU-[0-9]{4}$",
+            "example": "SKU-4821"
+          },
+          "inStock": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 500,
+            "example": 238
+          },
+          "reorderLevel": {
+            "type": "integer",
+            "minimum": 10,
+            "maximum": 150,
+            "example": 75
+          },
+          "warehouse": {
+            "type": "string",
+            "pattern": "^WH-[1-5]$",
+            "example": "WH-3"
+          }
+        },
+        "required": [
+          "sku",
+          "inStock",
+          "reorderLevel",
+          "warehouse"
+        ]
+      }
+order: 1000
