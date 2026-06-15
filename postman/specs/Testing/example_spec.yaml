@@ -1,6 +1,6 @@
 openapi: 3.0.0
 info:
-  title: Example Spec
+  title: Example Collection
   version: 1.0.0
   description: A small HTTP API that returns randomly generated JSON payloads.
 servers:
@@ -72,7 +72,30 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Profile'
+                type: object
+                properties:
+                  id:
+                    type: string
+                    minLength: 8
+                    maxLength: 8
+                    example: ab12cd34
+                  name:
+                    type: string
+                    pattern: ^User-[0-9]{3}$
+                    example: User-123
+                  score:
+                    type: integer
+                    minimum: 1
+                    maximum: 100
+                    example: 87
+                  active:
+                    type: boolean
+                    example: true
+                required:
+                  - id
+                  - name
+                  - score
+                  - active
               example:
                 id: ab12cd34
                 name: User-123
@@ -89,7 +112,6 @@ paths:
                     type: string
                 required:
                   - error
-                additionalProperties: false
               example:
                 error: string
     get:
@@ -430,6 +452,17 @@ paths:
                     name: User-678
                     active: false
         '404':
+          description: The requested route was not found.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                required:
+                  - error
+        '500':
           description: The requested route was not found.
           content:
             application/json:

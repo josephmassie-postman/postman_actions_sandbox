@@ -9,8 +9,16 @@ workflows:
       collection: ../postman/collections/Example Collection
       options:
         syncExamples: false
+    - spec: ../postman/specs/Testing/friend-list-mock.openapi.yaml
+      collection: ../postman/collections/Friends API
+      options:
+        syncExamples: false
   syncCollectionToSpec:
     - spec: ../postman/specs/Testing/example_spec.yaml
       collection: ../postman/collections/Example Collection
+      options:
+        syncExamples: false
+    - spec: ../postman/specs/Testing/friend-list-mock.openapi.yaml
+      collection: ../postman/collections/Friends API
       options:
         syncExamples: false

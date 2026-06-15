@@ -1,0 +1,67 @@
+$kind: http-example
+name: A list of users in the friend list.
+request:
+  url: "{{baseUrl}}/api/friends"
+  method: GET
+  headers:
+    Accept: application/json
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "friends": [
+          {
+            "id": "u123ab45",
+            "name": "User-123",
+            "active": true
+          },
+          {
+            "id": "u678cd90",
+            "name": "User-678",
+            "active": false
+          }
+        ]
+      }
+    $type: |-
+      {
+        "type": "object",
+        "properties": {
+          "friends": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 8,
+                  "maxLength": 8,
+                  "example": "u123ab45"
+                },
+                "name": {
+                  "type": "string",
+                  "pattern": "^User-[0-9]{3}$",
+                  "example": "User-123"
+                },
+                "active": {
+                  "type": "boolean",
+                  "example": true
+                }
+              },
+              "required": [
+                "id",
+                "name",
+                "active"
+              ]
+            }
+          }
+        },
+        "required": [
+          "friends"
+        ]
+      }
+order: 1000

@@ -1,0 +1,59 @@
+openapi: 3.0.0
+info:
+  title: Friend List Mock API
+  version: 1.0.0
+  description: A minimal mock API spec with a single endpoint for a friend list.
+servers:
+  - url: '{{baseUrl}}'
+paths:
+  /api/friends:
+    get:
+      summary: Get friend list
+      operationId: getFriendList
+      responses:
+        '200':
+          description: A list of users in the friend list.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FriendListResponse'
+              example:
+                friends:
+                  - id: u123ab45
+                    name: User-123
+                    active: true
+                  - id: u678cd90
+                    name: User-678
+                    active: false
+components:
+  schemas:
+    Friend:
+      type: object
+      required:
+        - id
+        - name
+        - active
+      properties:
+        id:
+          type: string
+          minLength: 8
+          maxLength: 8
+          example: u123ab45
+        name:
+          type: string
+          pattern: ^User-[0-9]{3}$
+          example: User-123
+        active:
+          type: boolean
+          example: true
+      additionalProperties: false
+    FriendListResponse:
+      type: object
+      required:
+        - friends
+      properties:
+        friends:
+          type: array
+          items:
+            $ref: '#/components/schemas/Friend'
+      additionalProperties: false

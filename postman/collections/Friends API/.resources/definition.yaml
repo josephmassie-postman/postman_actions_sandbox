@@ -1,0 +1,4 @@
+$kind: collection
+description: A minimal mock API spec with a single endpoint for a friend list.
+variables:
+  baseUrl: "{{baseUrl}}"

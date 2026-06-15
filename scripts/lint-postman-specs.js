@@ -4,9 +4,9 @@ const { execFileSync } = require('child_process');
 const fs = require('fs/promises');
 const path = require('path');
 
-const DEFAULT_CONFIG_PATH = '.postman-sync.json';
 const DEFAULT_LINT_FAIL_SEVERITY = 'error';
 const POSTMAN_CLI_BIN = process.env.POSTMAN_CLI_BIN || 'postman';
+const DEFAULT_SPECS_ROOT = 'postman/specs';
 
 const repoRoot = execFileSync('git', ['rev-parse', '--show-toplevel'], {
   encoding: 'utf8',
@@ -16,11 +16,6 @@ const toPosixPath = (value) => value.split(path.sep).join('/');
 
 const resolveRepoPath = (repoRelativePath) =>
   path.resolve(repoRoot, repoRelativePath);
-
-const readJson = async (filePath) => {
-  const raw = await fs.readFile(filePath, 'utf8');
-  return JSON.parse(raw);
-};
 
 const getChangedFiles = () => {
   if (
@@ -45,22 +40,12 @@ const getChangedFiles = () => {
   return new Set(output.split('\n').filter(Boolean).map(toPosixPath));
 };
 
-const shouldLintSpec = (spec, changedFiles, configPath) => {
+const shouldLintSpec = (specPath, changedFiles) => {
   if (!changedFiles) {
     return true;
   }
 
-  const watchedPaths = [spec.path, ...(spec.watchPaths || []), configPath].map(
-    toPosixPath,
-  );
-
-  return watchedPaths.some((watchedPath) => changedFiles.has(watchedPath));
-};
-
-const assertSpecConfig = (spec) => {
-  if (!spec.path) {
-    throw new Error('Spec config is missing required "path" value.');
-  }
+  return changedFiles.has(toPosixPath(specPath));
 };
 
 const ensurePostmanCliAvailable = () => {
@@ -108,33 +93,67 @@ const lintSpecFile = (specAbsolutePath, options = {}) => {
   console.log(`Spec lint passed for ${label}.`);
 };
 
+const collectLocalSpecPaths = async (specsRoot) => {
+  const rootAbsolutePath = resolveRepoPath(specsRoot);
+  const entries = await fs.readdir(rootAbsolutePath, { withFileTypes: true });
+  const specPaths = [];
+
+  const walk = async (dirAbsolutePath) => {
+    const dirEntries = await fs.readdir(dirAbsolutePath, { withFileTypes: true });
+    for (const entry of dirEntries) {
+      const entryAbsolutePath = path.join(dirAbsolutePath, entry.name);
+      if (entry.isDirectory()) {
+        await walk(entryAbsolutePath);
+        continue;
+      }
+
+      if (!entry.isFile()) {
+        continue;
+      }
+
+      if (entry.name.endsWith('.yaml') || entry.name.endsWith('.yml')) {
+        specPaths.push(toPosixPath(path.relative(repoRoot, entryAbsolutePath)));
+      }
+    }
+  };
+
+  for (const entry of entries) {
+    const entryAbsolutePath = path.join(rootAbsolutePath, entry.name);
+    if (entry.isDirectory()) {
+      await walk(entryAbsolutePath);
+      continue;
+    }
+
+    if (entry.isFile() && (entry.name.endsWith('.yaml') || entry.name.endsWith('.yml'))) {
+      specPaths.push(toPosixPath(path.relative(repoRoot, entryAbsolutePath)));
+    }
+  }
+
+  return specPaths.sort();
+};
+
 const main = async () => {
-  const configPath = toPosixPath(
-    process.env.POSTMAN_SYNC_CONFIG || DEFAULT_CONFIG_PATH,
-  );
-  const config = await readJson(resolveRepoPath(configPath));
+  const specsRoot = toPosixPath(process.env.POSTMAN_SPECS_ROOT || DEFAULT_SPECS_ROOT);
   const changedFiles = getChangedFiles();
-  const specs = config.specs || [];
-  const specsToLint = specs.filter((spec) =>
-    shouldLintSpec(spec, changedFiles, configPath),
+  const allSpecs = await collectLocalSpecPaths(specsRoot);
+  const specsToLint = allSpecs.filter((specPath) =>
+    shouldLintSpec(specPath, changedFiles),
   );
 
+  if (allSpecs.length === 0) {
+    throw new Error(`No local OpenAPI spec files found under "${specsRoot}".`);
+  }
+
   if (specsToLint.length === 0) {
-    console.log('No configured Postman specs changed. Nothing to lint.');
+    console.log('No local OpenAPI spec changes detected. Nothing to lint.');
     return;
   }
 
-  for (const spec of specsToLint) {
-    assertSpecConfig(spec);
-
-    lintSpecFile(resolveRepoPath(spec.path), {
-      label: spec.name || spec.path,
-      failSeverity:
-        spec.lintFailSeverity || config.lintFailSeverity || DEFAULT_LINT_FAIL_SEVERITY,
-      workspaceId:
-        spec.postmanWorkspaceId ||
-        config.postmanWorkspaceId ||
-        process.env.POSTMAN_WORKSPACE_ID,
+  for (const specPath of specsToLint) {
+    lintSpecFile(resolveRepoPath(specPath), {
+      label: specPath,
+      failSeverity: DEFAULT_LINT_FAIL_SEVERITY,
+      workspaceId: process.env.POSTMAN_WORKSPACE_ID,
     });
   }
 };
