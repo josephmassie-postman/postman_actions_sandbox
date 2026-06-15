@@ -6,9 +6,9 @@
   "specs": [
     {
       "name": "Random JSON Server API",
-      "path": "example_spec.yaml",
+      "path": "postman/specs/Testing/example_spec.yaml",
       "postmanSpecId": "a5104d5a-0916-402b-a69e-ecea057ef6a8",
-      "postmanSpecFilePath": "example_spec.yaml",
+      "postmanSpecFilePath": "postman/specs/Testing/example_spec.yaml",
       "watchPaths": [
         "src/server.js",
         ".postman/resources.yaml",
