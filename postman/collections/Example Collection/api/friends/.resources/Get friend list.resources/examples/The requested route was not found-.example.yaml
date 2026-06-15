@@ -16,16 +16,4 @@ response:
       {
         "error": "string"
       }
-    $type: |-
-      {
-        "type": "object",
-        "properties": {
-          "error": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "error"
-        ]
-      }
 order: 2000

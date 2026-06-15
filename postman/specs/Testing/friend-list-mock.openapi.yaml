@@ -25,6 +25,38 @@ paths:
                   - id: u678cd90
                     name: User-678
                     active: false
+  /api/friends/{friendId}:
+    get:
+      summary: Get a friend by id
+      operationId: getFriendById
+      parameters:
+        - in: path
+          name: friendId
+          required: true
+          schema:
+            type: string
+            minLength: 8
+            maxLength: 8
+          example: u123ab45
+      responses:
+        '200':
+          description: The friend with the provided id.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Friend'
+              example:
+                id: u123ab45
+                name: User-123
+                active: true
+        '404':
+          description: Friend not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: Friend not found
 components:
   schemas:
     Friend:
@@ -56,4 +88,12 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Friend'
+      additionalProperties: false
+    Error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
       additionalProperties: false
