@@ -57,6 +57,38 @@ paths:
                 $ref: '#/components/schemas/Error'
               example:
                 error: Friend not found
+  /api/friends/search:
+    get:
+      summary: Search friends by name prefix
+      operationId: searchFriends
+      parameters:
+        - in: query
+          name: q
+          required: true
+          schema:
+            type: string
+            minLength: 1
+          example: User-
+      responses:
+        '200':
+          description: Friends matching the provided query.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FriendListResponse'
+              example:
+                friends:
+                  - id: u123ab45
+                    name: User-123
+                    active: true
+        '400':
+          description: Invalid search query.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: Query parameter q is required
 components:
   schemas:
     Friend:
