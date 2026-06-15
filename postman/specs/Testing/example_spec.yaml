@@ -1,6 +1,6 @@
 openapi: 3.0.0
 info:
-  title: Example Collection
+  title: Example Spec
   version: 1.0.0
   description: A small HTTP API that returns randomly generated JSON payloads.
 servers:
@@ -62,26 +62,10 @@ paths:
                     type: string
               example:
                 error: Internal Server Error
-  /test/test2:
-    get:
-      summary: A test api.
-      operationId: testTestTwo
-      responses:
-        '200':
-          description: A test api response.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Profile'
-              example:
-                id: 123
-                name: user
-                score: 87
-                active: true
   /api/profile:
     patch:
       summary: Update a random user profile
-      operationId: getRandomProfile
+      operationId: patchRandomProfile
       responses:
         '200':
           description: A randomly generated user profile.
@@ -426,6 +410,36 @@ paths:
                     type: string
                 required:
                   - error
+  /api/friends:
+    get:
+      summary: Get friend list
+      operationId: getFriendList
+      responses:
+        '200':
+          description: A list of users in the friend list.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FriendList'
+              example:
+                friends:
+                  - id: u123ab45
+                    name: User-123
+                    active: true
+                  - id: u678cd90
+                    name: User-678
+                    active: false
+        '404':
+          description: The requested route was not found.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                required:
+                  - error
 components:
   responses:
     NotFound:
@@ -469,6 +483,7 @@ components:
             - /api/orders
             - /api/inventory
             - /api/notifications
+            - /api/friends
       additionalProperties: false
     Profile:
       type: object
@@ -640,4 +655,34 @@ components:
         sent:
           type: boolean
           example: true
+      additionalProperties: false
+    Friend:
+      type: object
+      required:
+        - id
+        - name
+        - active
+      properties:
+        id:
+          type: string
+          minLength: 8
+          maxLength: 8
+          example: u123ab45
+        name:
+          type: string
+          pattern: ^User-[0-9]{3}$
+          example: User-123
+        active:
+          type: boolean
+          example: true
+      additionalProperties: false
+    FriendList:
+      type: object
+      required:
+        - friends
+      properties:
+        friends:
+          type: array
+          items:
+            $ref: '#/components/schemas/Friend'
       additionalProperties: false
