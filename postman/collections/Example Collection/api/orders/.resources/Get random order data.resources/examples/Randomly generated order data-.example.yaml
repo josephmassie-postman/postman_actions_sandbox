@@ -1,0 +1,63 @@
+$kind: http-example
+name: Randomly generated order data.
+request:
+  url: "{{baseUrl}}/api/orders"
+  method: GET
+  headers:
+    Accept: application/json
+  body:
+    type: text
+    content: ""
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "orderId": "ORD-123456",
+        "itemCount": 3,
+        "totalUsd": 149.95,
+        "status": "cancelled"
+      }
+    $type: |-
+      {
+        "type": "object",
+        "properties": {
+          "orderId": {
+            "type": "string",
+            "pattern": "^ORD-[0-9]{6}$",
+            "example": "ORD-123456"
+          },
+          "itemCount": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 8,
+            "example": 3
+          },
+          "totalUsd": {
+            "type": "number",
+            "minimum": 9.99,
+            "maximum": 499.99,
+            "example": 149.95
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "processing",
+              "shipped",
+              "delivered",
+              "cancelled"
+            ]
+          }
+        },
+        "required": [
+          "orderId",
+          "itemCount",
+          "totalUsd",
+          "status"
+        ]
+      }
+order: 1000

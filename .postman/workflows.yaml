@@ -5,12 +5,12 @@
 # This file is declarative metadata and does not execute workflows by itself.
 workflows:
   syncSpecToCollection:
-    - spec: ../random-json-server.openapi.yaml
-      collection: ../postman/collections/Testing
+    - spec: ../postman/specs/Testing/example_spec.yaml
+      collection: ../postman/collections/Example Collection
       options:
         syncExamples: false
   syncCollectionToSpec:
-    - spec: ../random-json-server.openapi.yaml
-      collection: ../postman/collections/Testing
+    - spec: ../postman/specs/Testing/example_spec.yaml
+      collection: ../postman/collections/Example Collection
       options:
         syncExamples: false
