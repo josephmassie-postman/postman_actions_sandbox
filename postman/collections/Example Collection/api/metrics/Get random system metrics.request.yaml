@@ -1,0 +1,10 @@
+$kind: http-request
+url: "{{baseUrl}}/api/metrics"
+method: GET
+headers:
+  Accept: application/json
+body:
+  type: text
+  content: ""
+examples: ./.resources/Get random system metrics.resources/examples
+order: 1000
