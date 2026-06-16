@@ -3,8 +3,9 @@ description: A small HTTP API that returns randomly generated JSON payloads.
 variables:
   baseUrl: "{{baseUrl}}"
 auth:
-  - id: 7ab8bedb-8a9c-4010-aed4-d8f4b256d07e
+  - id: 02d5cb62-a2c3-4cc5-9662-40425af49657
     type: apikey
     name: apikey auth
     credentials:
       key: X-API-Key
+      in: header

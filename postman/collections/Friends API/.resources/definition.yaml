@@ -3,8 +3,9 @@ description: A minimal mock API spec with a single endpoint for a friend list.
 variables:
   baseUrl: "{{baseUrl}}"
 auth:
-  - id: 72a9a37b-f8ac-43b8-b100-3990488bf001
+  - id: 9552a146-985e-46c7-a3fb-9b971e2fef3a
     type: apikey
     name: apikey auth
     credentials:
       key: X-API-Key
+      in: header

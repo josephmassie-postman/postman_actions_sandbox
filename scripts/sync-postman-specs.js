@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 const fs = require('fs');
+const path = require('path');
 
 const main = async () => {
   const apiKey = process.env.POSTMAN_API_KEY;
@@ -35,6 +36,14 @@ const main = async () => {
       throw new Error(`${method} ${url} failed (${response.status}): ${detail}`);
     }
     return { payload, response };
+  };
+
+  const isAlreadyInSyncError = (error) => {
+    if (!error || !error.message) return false;
+    return (
+      error.message.includes('failed (400)') &&
+      error.message.toLowerCase().includes('already in sync')
+    );
   };
 
   const extractCollections = (payload) => {
@@ -101,7 +110,8 @@ const main = async () => {
 
   const readSpecTitleFromPath = (specPath) => {
     try {
-      const content = fs.readFileSync(specPath, 'utf8');
+      const resolvedSpecPath = path.resolve('.postman', specPath);
+      const content = fs.readFileSync(resolvedSpecPath, 'utf8');
       const lines = content.split(/\r?\n/);
       let inInfoBlock = false;
       let infoIndent = 0;
@@ -201,9 +211,7 @@ const main = async () => {
 
     if (collectionUids.length === 0) {
       console.log(`No generated collections for ${specName}; creating one.`);
-      console.log(
-        `Generation input for spec ${specId}: specName="${specName}", specTitle="${specTitle || ''}", targetCollectionName="${targetCollectionName}"`,
-      );
+
       const { payload: generationPayload, response } = await request(
         'POST',
         `/specs/${specId}/generations/collection`,
@@ -249,10 +257,21 @@ const main = async () => {
       for (const collectionUid of collectionUids) {
         const label = `${specName} -> ${collectionUid}`;
         console.log(`Syncing ${label}...`);
-        const { payload: taskPayload, response } = await request(
-          'PUT',
-          `/collections/${encodeURIComponent(collectionUid)}/synchronizations?specId=${encodeURIComponent(specId)}`,
-        );
+        let syncResponse;
+        try {
+          syncResponse = await request(
+            'PUT',
+            `/collections/${encodeURIComponent(collectionUid)}/synchronizations?specId=${encodeURIComponent(specId)}`,
+          );
+        } catch (error) {
+          if (isAlreadyInSyncError(error)) {
+            console.log(`Collection already in sync for ${label}; continuing.`);
+            continue;
+          }
+
+          throw error;
+        }
+        const { payload: taskPayload, response } = syncResponse;
 
         const task = {
           ...taskPayload,

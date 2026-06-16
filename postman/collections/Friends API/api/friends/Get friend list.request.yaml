@@ -7,4 +7,4 @@ body:
   type: text
   content: ""
 examples: ./.resources/Get friend list.resources/examples
-order: 4000
+order: 3000
