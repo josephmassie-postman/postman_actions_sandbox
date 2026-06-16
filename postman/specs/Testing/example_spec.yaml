@@ -1,10 +1,12 @@
 openapi: 3.0.0
 info:
-  title: Example Collection
+  title: Example API
   version: 1.0.0
   description: A small HTTP API that returns randomly generated JSON payloads.
 servers:
   - url: '{{baseUrl}}'
+security:
+  - ApiKeyAuth: []
 paths:
   /:
     get:
@@ -16,22 +18,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: Simple random JSON server
-                  endpoints:
-                    type: array
-                    example:
-                      - /api/profile
-                      - /api/weather
-                      - /api/metrics
-                    items:
-                      type: string
-                required:
-                  - message
-                  - endpoints
+                $ref: '#/components/schemas/ServiceInfo'
               example:
                 message: Simple random JSON server
                 endpoints:
@@ -43,12 +30,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                required:
-                  - error
+                $ref: '#/components/schemas/Error'
               example:
                 error: string
         '500':
@@ -56,10 +38,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
+                $ref: '#/components/schemas/Error'
               example:
                 error: Internal Server Error
   /api/profile:
@@ -72,25 +51,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  id:
-                    type: string
-                    minLength: 8
-                    maxLength: 8
-                    example: ab12cd34
-                  name:
-                    type: string
-                    pattern: ^User-[0-9]{3}$
-                    example: User-123
-                  active:
-                    type: boolean
-                    example: true
-                required:
-                  - id
-                  - name
-                  - score
-                  - active
+                $ref: '#/components/schemas/Profile'
               example:
                 id: ab12cd34
                 name: User-123
@@ -101,12 +62,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                required:
-                  - error
+                $ref: '#/components/schemas/Error'
               example:
                 error: string
     get:
@@ -118,30 +74,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  id:
-                    type: string
-                    minLength: 8
-                    maxLength: 8
-                    example: ab12cd34
-                  name:
-                    type: string
-                    pattern: ^User-[0-9]{3}$
-                    example: User-123
-                  score:
-                    type: integer
-                    minimum: 1
-                    maximum: 100
-                    example: 87
-                  active:
-                    type: boolean
-                    example: true
-                required:
-                  - id
-                  - name
-                  - score
-                  - active
+                $ref: '#/components/schemas/Profile'
               example:
                 id: ab12cd34
                 name: User-123
@@ -152,12 +85,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                required:
-                  - error
+                $ref: '#/components/schemas/Error'
               example:
                 error: string
   /api/weather:
@@ -170,34 +98,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  location:
-                    type: string
-                    pattern: ^City-[0-9]+$
-                    example: City-12
-                  temperatureF:
-                    type: integer
-                    minimum: 40
-                    maximum: 100
-                    example: 72
-                  humidity:
-                    type: number
-                    minimum: 0.2
-                    maximum: 0.9
-                    example: 0.63
-                  condition:
-                    type: string
-                    enum:
-                      - sunny
-                      - cloudy
-                      - rainy
-                      - windy
-                required:
-                  - location
-                  - temperatureF
-                  - humidity
-                  - condition
+                $ref: '#/components/schemas/Weather'
               example:
                 location: City-12
                 temperatureF: 72
@@ -208,12 +109,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                required:
-                  - error
+                $ref: '#/components/schemas/Error'
               example:
                 error: string
   /api/metrics:
@@ -226,33 +122,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  requestId:
-                    type: string
-                    minLength: 8
-                    maxLength: 8
-                    example: ef56gh78
-                  cpuLoad:
-                    type: number
-                    minimum: 0
-                    maximum: 1
-                    example: 0.421
-                  memoryMb:
-                    type: integer
-                    minimum: 128
-                    maximum: 4096
-                    example: 1024
-                  latencyMs:
-                    type: integer
-                    minimum: 10
-                    maximum: 500
-                    example: 125
-                required:
-                  - requestId
-                  - cpuLoad
-                  - memoryMb
-                  - latencyMs
+                $ref: '#/components/schemas/Metrics'
               example:
                 requestId: ef56gh78
                 cpuLoad: 0.421
@@ -263,12 +133,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                required:
-                  - error
+                $ref: '#/components/schemas/Error'
               example:
                 error: string
         '500':
@@ -276,12 +141,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                required:
-                  - error
+                $ref: '#/components/schemas/Error'
               example:
                 error: string
   /api/orders:
@@ -294,45 +154,13 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  orderId:
-                    type: string
-                    pattern: ^ORD-[0-9]{6}$
-                    example: ORD-123456
-                  itemCount:
-                    type: integer
-                    minimum: 1
-                    maximum: 8
-                    example: 3
-                  totalUsd:
-                    type: number
-                    minimum: 9.99
-                    maximum: 499.99
-                    example: 149.95
-                  status:
-                    type: string
-                    enum:
-                      - processing
-                      - shipped
-                      - delivered
-                      - cancelled
-                required:
-                  - orderId
-                  - itemCount
-                  - totalUsd
-                  - status
+                $ref: '#/components/schemas/Order'
         '404':
           description: The requested route was not found.
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                required:
-                  - error
+                $ref: '#/components/schemas/Error'
   /api/inventory:
     get:
       summary: Get random inventory data
@@ -343,42 +171,13 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  sku:
-                    type: string
-                    pattern: ^SKU-[0-9]{4}$
-                    example: SKU-4821
-                  inStock:
-                    type: integer
-                    minimum: 0
-                    maximum: 500
-                    example: 238
-                  reorderLevel:
-                    type: integer
-                    minimum: 10
-                    maximum: 150
-                    example: 75
-                  warehouse:
-                    type: string
-                    pattern: ^WH-[1-5]$
-                    example: WH-3
-                required:
-                  - sku
-                  - inStock
-                  - reorderLevel
-                  - warehouse
+                $ref: '#/components/schemas/Inventory'
         '404':
           description: The requested route was not found.
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                required:
-                  - error
+                $ref: '#/components/schemas/Error'
   /api/notifications:
     get:
       summary: Get random notification status
@@ -389,44 +188,13 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  notificationId:
-                    type: string
-                    minLength: 8
-                    maxLength: 8
-                    example: z9x8c7v6
-                  channel:
-                    type: string
-                    enum:
-                      - email
-                      - sms
-                      - push
-                  priority:
-                    type: string
-                    enum:
-                      - low
-                      - medium
-                      - high
-                  sent:
-                    type: boolean
-                    example: true
-                required:
-                  - notificationId
-                  - channel
-                  - priority
-                  - sent
+                $ref: '#/components/schemas/Notification'
         '404':
           description: The requested route was not found.
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                required:
-                  - error
+                $ref: '#/components/schemas/Error'
   /api/friends:
     get:
       summary: Get friend list
@@ -451,24 +219,19 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                required:
-                  - error
+                $ref: '#/components/schemas/Error'
         '500':
           description: The requested route was not found.
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                required:
-                  - error
+                $ref: '#/components/schemas/Error'
 components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
   responses:
     NotFound:
       description: The requested route was not found.

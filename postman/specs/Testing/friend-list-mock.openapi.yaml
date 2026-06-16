@@ -5,6 +5,8 @@ info:
   description: A minimal mock API spec with a single endpoint for a friend list.
 servers:
   - url: '{{baseUrl}}'
+security:
+  - ApiKeyAuth: []
 paths:
   /api/friends:
     get:
@@ -25,6 +27,14 @@ paths:
                   - id: u678cd90
                     name: User-678
                     active: false
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: Internal server error
   /api/friends/{friendId}:
     get:
       summary: Get a friend by id
@@ -34,9 +44,7 @@ paths:
           name: friendId
           required: true
           schema:
-            type: string
-            minLength: 8
-            maxLength: 8
+            $ref: '#/components/schemas/FriendId'
           example: u123ab45
       responses:
         '200':
@@ -57,6 +65,14 @@ paths:
                 $ref: '#/components/schemas/Error'
               example:
                 error: Friend not found
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: Internal server error
   /api/friends/search:
     get:
       summary: Search friends by name prefix
@@ -66,8 +82,7 @@ paths:
           name: q
           required: true
           schema:
-            type: string
-            minLength: 1
+            $ref: '#/components/schemas/SearchQuery'
           example: User-
       responses:
         '200':
@@ -89,6 +104,14 @@ paths:
                 $ref: '#/components/schemas/Error'
               example:
                 error: Query parameter q is required
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: Internal server error
   /api/friends/stats:
     get:
       summary: Get friend list statistics
@@ -104,8 +127,38 @@ paths:
                 totalFriends: 24
                 activeFriends: 18
                 inactiveFriends: 6
+        '400':
+          description: Malformed request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: Malformed request
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: Internal server error
 components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
   schemas:
+    FriendId:
+      type: string
+      minLength: 8
+      maxLength: 8
+      example: u123ab45
+    SearchQuery:
+      type: string
+      minLength: 1
+      example: User-
     Friend:
       type: object
       required:
