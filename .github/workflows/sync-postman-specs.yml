@@ -260,6 +260,17 @@ jobs:
                   `/specs/${specId}/generations/collection`,
                   {
                     name: `${specName}`,
+                    "options": {
+                        "requestNameSource": "Fallback",
+                        "indentCharacter": "Space",
+                        "folderStrategy": "Paths",
+                        "includeAuthInfoInExample": true,
+                        "enableOptionalParameters": true,
+                        "keepImplicitHeaders": false,
+                        "includeDeprecated": true,
+                        "alwaysInheritAuthentication": false,
+                        "nestedFolderHierarchy": false
+                    }
                   }
                 );
 
@@ -285,29 +296,29 @@ jobs:
                     `Collection generation succeeded but no collections were found for ${specName}.`,
                   );
                 }
-              }
+              } else {
+                for (const collectionUid of collectionUids) {
+                  const label = `${specName} -> ${collectionUid}`;
+                  console.log(`Syncing ${label}...`);
+                  const { payload: taskPayload, response } = await request(
+                    'PUT',
+                    `/collections/${encodeURIComponent(collectionUid)}/synchronizations?specId=${encodeURIComponent(specId)}`,
+                  );
 
-              for (const collectionUid of collectionUids) {
-                const label = `${specName} -> ${collectionUid}`;
-                console.log(`Syncing ${label}...`);
-                const { payload: taskPayload, response } = await request(
-                  'PUT',
-                  `/collections/${encodeURIComponent(collectionUid)}/synchronizations?specId=${encodeURIComponent(specId)}`,
-                );
+                  const task = {
+                    ...taskPayload,
+                    url:
+                      taskPayload?.url ||
+                      taskPayload?.task?.url ||
+                      taskPayload?.taskUrl ||
+                      taskPayload?.meta?.task?.url ||
+                      taskPayload?.data?.url ||
+                      response.headers.get('location') ||
+                      response.headers.get('content-location'),
+                  };
 
-                const task = {
-                  ...taskPayload,
-                  url:
-                    taskPayload?.url ||
-                    taskPayload?.task?.url ||
-                    taskPayload?.taskUrl ||
-                    taskPayload?.meta?.task?.url ||
-                    taskPayload?.data?.url ||
-                    response.headers.get('location') ||
-                    response.headers.get('content-location'),
-                };
-
-                await pollTask(task, label);
+                  await pollTask(task, label);
+                }
               }
             }
           };
