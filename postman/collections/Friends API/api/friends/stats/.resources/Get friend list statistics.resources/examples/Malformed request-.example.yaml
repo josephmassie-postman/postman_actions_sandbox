@@ -1,7 +1,7 @@
 $kind: http-example
-name: The requested route was not found.
+name: Malformed request.
 request:
-  url: "{{baseUrl}}/api/friends"
+  url: "{{baseUrl}}/api/friends/stats"
   method: GET
   headers:
     - key: Accept
@@ -10,15 +10,15 @@ request:
       value: <API Key>
       description: "Added as a part of security scheme: apikey"
 response:
-  statusCode: 404
-  statusText: Not Found
+  statusCode: 400
+  statusText: Bad Request
   headers:
     Content-Type: application/json
   body:
     type: json
     content: |-
       {
-        "error": "string"
+        "error": "Malformed request"
       }
     $type: |-
       {

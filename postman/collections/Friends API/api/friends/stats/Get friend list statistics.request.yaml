@@ -1,0 +1,7 @@
+$kind: http-request
+url: "{{baseUrl}}/api/friends/stats"
+method: GET
+headers:
+  Accept: application/json
+examples: ./.resources/Get friend list statistics.resources/examples
+order: 1000

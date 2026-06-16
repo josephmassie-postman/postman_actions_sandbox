@@ -1,14 +1,16 @@
 $kind: http-example
-name: A randomly generated user profile.
+name: The friend with the provided id.
 request:
-  url: "{{baseUrl}}/api/profile"
-  method: PATCH
+  url: "{{baseUrl}}/api/friends/:friendId"
+  method: GET
   headers:
     - key: Accept
       value: application/json
     - key: X-API-Key
       value: <API Key>
       description: "Added as a part of security scheme: apikey"
+  pathVariables:
+    friendId: u123ab45
 response:
   statusCode: 200
   statusText: OK
@@ -18,9 +20,8 @@ response:
     type: json
     content: |-
       {
-        "id": "ab12cd34",
+        "id": "u123ab45",
         "name": "User-123",
-        "score": 87,
         "active": true
       }
     $type: |-
@@ -31,18 +32,12 @@ response:
             "type": "string",
             "minLength": 8,
             "maxLength": 8,
-            "example": "ab12cd34"
+            "example": "u123ab45"
           },
           "name": {
             "type": "string",
             "pattern": "^User-[0-9]{3}$",
             "example": "User-123"
-          },
-          "score": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 100,
-            "example": 87
           },
           "active": {
             "type": "boolean",
@@ -52,7 +47,6 @@ response:
         "required": [
           "id",
           "name",
-          "score",
           "active"
         ]
       }

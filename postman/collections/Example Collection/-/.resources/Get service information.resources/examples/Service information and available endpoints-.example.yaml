@@ -4,7 +4,11 @@ request:
   url: "{{baseUrl}}/"
   method: GET
   headers:
-    Accept: application/json
+    - key: Accept
+      value: application/json
+    - key: X-API-Key
+      value: <API Key>
+      description: "Added as a part of security scheme: apikey"
   body:
     type: text
     content: ""
@@ -37,7 +41,11 @@ response:
             "example": [
               "/api/profile",
               "/api/weather",
-              "/api/metrics"
+              "/api/metrics",
+              "/api/orders",
+              "/api/inventory",
+              "/api/notifications",
+              "/api/friends"
             ],
             "items": {
               "type": "string"

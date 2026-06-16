@@ -1,0 +1,25 @@
+$kind: http-request
+url: "{{baseUrl}}/api/friends/:friendId"
+method: GET
+headers:
+  Accept: application/json
+pathVariables:
+  - key: friendId
+    value: u123ab45
+    $type: |-
+      {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 8,
+            "example": "u123ab45"
+          }
+        },
+        "required": [
+          "value"
+        ]
+      }
+examples: ./.resources/Get a friend by id.resources/examples
+order: 1000

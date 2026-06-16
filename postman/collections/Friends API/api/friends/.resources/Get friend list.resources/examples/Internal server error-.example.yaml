@@ -1,5 +1,5 @@
 $kind: http-example
-name: The requested route was not found.
+name: Internal server error.
 request:
   url: "{{baseUrl}}/api/friends"
   method: GET
@@ -10,15 +10,15 @@ request:
       value: <API Key>
       description: "Added as a part of security scheme: apikey"
 response:
-  statusCode: 404
-  statusText: Not Found
+  statusCode: 500
+  statusText: Internal Server Error
   headers:
     Content-Type: application/json
   body:
-    type: json
+    type: text
     content: |-
       {
-        "error": "string"
+        "error": "Internal server error"
       }
     $type: |-
       {

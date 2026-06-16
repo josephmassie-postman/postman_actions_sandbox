@@ -4,7 +4,11 @@ request:
   url: "{{baseUrl}}/api/weather"
   method: GET
   headers:
-    Accept: application/json
+    - key: Accept
+      value: application/json
+    - key: X-API-Key
+      value: <API Key>
+      description: "Added as a part of security scheme: apikey"
   body:
     type: text
     content: ""
