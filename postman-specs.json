@@ -1,0 +1,34 @@
+{
+    "meta": {
+        "nextCursor": null
+    },
+    "specs": [
+        {
+            "createdBy": 53497454,
+            "updatedBy": 53497454,
+            "type": "OPENAPI:3.0",
+            "name": "pantry-inventory-api.openapi.yaml",
+            "id": "c2bf4bc1-4a87-4b63-8f7e-5767a39344ea",
+            "updatedAt": "2026-06-16T18:29:12.000Z",
+            "createdAt": "2026-06-16T18:29:12.000Z"
+        },
+        {
+            "createdBy": 53497454,
+            "updatedBy": 53497454,
+            "type": "OPENAPI:3.0",
+            "name": "friend-list-mock.openapi.yaml",
+            "id": "d006b18b-8213-4384-b5f2-e7996045149c",
+            "updatedAt": "2026-06-15T14:50:01.000Z",
+            "createdAt": "2026-06-15T14:50:01.000Z"
+        },
+        {
+            "createdBy": 53497454,
+            "updatedBy": 53497454,
+            "type": "OPENAPI:3.0",
+            "name": "example_spec.yaml",
+            "id": "a5104d5a-0916-402b-a69e-ecea057ef6a8",
+            "updatedAt": "2026-06-15T03:15:47.000Z",
+            "createdAt": "2026-06-15T03:15:47.000Z"
+        }
+    ]
+}
