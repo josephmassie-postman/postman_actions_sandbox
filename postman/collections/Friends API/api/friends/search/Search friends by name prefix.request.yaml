@@ -1,0 +1,24 @@
+$kind: http-request
+url: "{{baseUrl}}/api/friends/search?q=User-"
+method: GET
+headers:
+  Accept: application/json
+queryParams:
+  - key: q
+    value: User-
+    $type: |-
+      {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "string",
+            "minLength": 1,
+            "example": "User-"
+          }
+        },
+        "required": [
+          "value"
+        ]
+      }
+examples: ./.resources/Search friends by name prefix.resources/examples
+order: 1000

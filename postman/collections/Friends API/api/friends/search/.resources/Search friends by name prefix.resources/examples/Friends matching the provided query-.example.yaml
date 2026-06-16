@@ -1,7 +1,7 @@
 $kind: http-example
-name: A list of users in the friend list.
+name: Friends matching the provided query.
 request:
-  url: "{{baseUrl}}/api/friends"
+  url: "{{baseUrl}}/api/friends/search?q=User-"
   method: GET
   headers:
     - key: Accept
@@ -9,6 +9,8 @@ request:
     - key: X-API-Key
       value: <API Key>
       description: "Added as a part of security scheme: apikey"
+  queryParams:
+    q: User-
 response:
   statusCode: 200
   statusText: OK
@@ -23,11 +25,6 @@ response:
             "id": "u123ab45",
             "name": "User-123",
             "active": true
-          },
-          {
-            "id": "u678cd90",
-            "name": "User-678",
-            "active": false
           }
         ]
       }

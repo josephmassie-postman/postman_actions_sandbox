@@ -194,6 +194,55 @@ jobs:
 
             const uniqueCollectionUids = (input) => [...new Set(input.filter(Boolean))];
 
+            const buildSpecIdToPathMap = (resourcesYaml) => {
+              const lines = resourcesYaml.split(/\r?\n/);
+              const map = new Map();
+              let inCloudResources = false;
+              let inCloudSpecs = false;
+
+              for (const line of lines) {
+                if (/^\s*cloudResources:\s*$/.test(line)) {
+                  inCloudResources = true;
+                  inCloudSpecs = false;
+                  continue;
+                }
+
+                if (!inCloudResources) continue;
+
+                if (/^\s{2}\S/.test(line) && !/^\s{2}specs:\s*$/.test(line)) {
+                  inCloudSpecs = false;
+                }
+
+                if (/^\s{2}specs:\s*$/.test(line)) {
+                  inCloudSpecs = true;
+                  continue;
+                }
+
+                if (!inCloudSpecs) continue;
+
+                const match = line.match(/^\s{4}(.+?):\s*([0-9a-fA-F-]+)\s*$/);
+                if (!match) continue;
+
+                const [, specPathRaw, specId] = match;
+                const specPath = specPathRaw.trim().replace(/^['"]|['"]$/g, '');
+                map.set(specId, specPath);
+              }
+
+              return map;
+            };
+
+            const readSpecTitleFromPath = (specPath) => {
+              try {
+                const content = fs.readFileSync(specPath, 'utf8');
+                const infoBlockMatch = content.match(/^\s*info:\s*$([\s\S]*?)(?=^\S|\Z)/m);
+                const titleLineMatch = infoBlockMatch?.[1]?.match(/^\s{2}title:\s*(.+)\s*$/m);
+                const titleValue = titleLineMatch?.[1]?.trim().replace(/^['"]|['"]$/g, '');
+                return titleValue || null;
+              } catch {
+                return null;
+              }
+            };
+
             const pollTask = async (task, label) => {
               const taskUrl =
                 task?.url ||
@@ -235,6 +284,9 @@ jobs:
               throw new Error('Unexpected response shape in postman-specs.json');
             }
 
+            const resourcesYaml = fs.readFileSync('.postman/resources.yaml', 'utf8');
+            const specIdToPath = buildSpecIdToPathMap(resourcesYaml);
+
             const listGeneratedCollectionUids = async (specId) => {
               const { payload: collectionsPayload } = await request(
                 'GET',
@@ -249,17 +301,23 @@ jobs:
             for (const spec of specs) {
               const specId = spec.id || spec.specId || spec.uid;
               const specName = spec.name || specId;
+              const specPath = specIdToPath.get(specId);
+              const specTitle = specPath ? readSpecTitleFromPath(specPath) : null;
+              const targetCollectionName = specTitle || specName;
               if (!specId) continue;
 
               let collectionUids = await listGeneratedCollectionUids(specId);
 
               if (collectionUids.length === 0) {
                 console.log(`No generated collections for ${specName}; creating one.`);
+                console.log(
+                  `Generation input for spec ${specId}: specName="${specName}", specTitle="${specTitle || ''}", targetCollectionName="${targetCollectionName}"`,
+                );
                 const { payload: generationPayload, response } = await request(
                   'POST',
                   `/specs/${specId}/generations/collection`,
                   {
-                    name: `${specName}`,
+                    name: targetCollectionName,
                     "options": {
                         "requestNameSource": "Fallback",
                         "indentCharacter": "Space",

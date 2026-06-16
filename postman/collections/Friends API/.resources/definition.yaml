@@ -2,3 +2,9 @@ $kind: collection
 description: A minimal mock API spec with a single endpoint for a friend list.
 variables:
   baseUrl: "{{baseUrl}}"
+auth:
+  - id: 72a9a37b-f8ac-43b8-b100-3990488bf001
+    type: apikey
+    name: apikey auth
+    credentials:
+      key: X-API-Key

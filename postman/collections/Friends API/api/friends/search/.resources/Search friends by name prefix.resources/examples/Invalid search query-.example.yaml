@@ -1,7 +1,7 @@
 $kind: http-example
-name: The requested route was not found.
+name: Invalid search query.
 request:
-  url: "{{baseUrl}}/api/friends"
+  url: "{{baseUrl}}/api/friends/search?q=User-"
   method: GET
   headers:
     - key: Accept
@@ -9,16 +9,18 @@ request:
     - key: X-API-Key
       value: <API Key>
       description: "Added as a part of security scheme: apikey"
+  queryParams:
+    q: User-
 response:
-  statusCode: 404
-  statusText: Not Found
+  statusCode: 400
+  statusText: Bad Request
   headers:
     Content-Type: application/json
   body:
     type: json
     content: |-
       {
-        "error": "string"
+        "error": "Query parameter q is required"
       }
     $type: |-
       {
