@@ -142,14 +142,16 @@ jobs:
 
             const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-            const request = async (method, endpoint) => {
+            const request = async (method, endpoint, body) => {
               const url = endpoint.startsWith('http') ? endpoint : `${apiBaseUrl}${endpoint}`;
               const response = await fetch(url, {
                 method,
                 headers: {
                   'X-Api-Key': apiKey,
                   Accept: 'application/json',
+                  ...(body ? { 'Content-Type': 'application/json' } : {}),
                 },
+                ...(body ? { body: JSON.stringify(body) } : {}),
               });
               const text = await response.text();
               let payload = {};
@@ -189,6 +191,8 @@ jobs:
               collection.collection?.id ||
               collection.output?.collectionUid ||
               collection.result?.collectionUid;
+
+            const uniqueCollectionUids = (input) => [...new Set(input.filter(Boolean))];
 
             const pollTask = async (task, label) => {
               const taskUrl =
@@ -231,25 +235,59 @@ jobs:
               throw new Error('Unexpected response shape in postman-specs.json');
             }
 
+            const listGeneratedCollectionUids = async (specId) => {
+              const { payload: collectionsPayload } = await request(
+                'GET',
+                `/specs/${specId}/generations/collection?limit=100`,
+              );
+
+              return uniqueCollectionUids(
+                extractCollections(collectionsPayload).map(collectionUidFor),
+              );
+            };
+
             for (const spec of specs) {
               const specId = spec.id || spec.specId || spec.uid;
               const specName = spec.name || specId;
               if (!specId) continue;
 
-              const { payload: collectionsPayload } = await request(
-                'GET',
-                `/specs/${specId}/generations/collection?limit=100`,
-              );
-              const collectionUids = extractCollections(collectionsPayload)
-                .map(collectionUidFor)
-                .filter(Boolean);
+              let collectionUids = await listGeneratedCollectionUids(specId);
 
               if (collectionUids.length === 0) {
-                console.log(`No generated collections for ${specName}; skipping.`);
-                continue;
+                console.log(`No generated collections for ${specName}; creating one.`);
+                const { payload: generationPayload, response } = await request(
+                  'POST',
+                  `/specs/${specId}/generations/collection`,
+                  {
+                    name: `${specName}`,
+                  }
+                );
+
+                const generationTask = {
+                  ...generationPayload,
+                  url:
+                    generationPayload?.url ||
+                    generationPayload?.task?.url ||
+                    generationPayload?.taskUrl ||
+                    generationPayload?.meta?.task?.url ||
+                    generationPayload?.data?.url ||
+                    response.headers.get('location') ||
+                    response.headers.get('content-location'),
+                };
+
+                if (generationTask.url) {
+                  await pollTask(generationTask, `${specName} collection generation`);
+                }
+
+                collectionUids = await listGeneratedCollectionUids(specId);
+                if (collectionUids.length === 0) {
+                  throw new Error(
+                    `Collection generation succeeded but no collections were found for ${specName}.`,
+                  );
+                }
               }
 
-              for (const collectionUid of [...new Set(collectionUids)]) {
+              for (const collectionUid of collectionUids) {
                 const label = `${specName} -> ${collectionUid}`;
                 console.log(`Syncing ${label}...`);
                 const { payload: taskPayload, response } = await request(

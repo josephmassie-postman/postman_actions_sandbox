@@ -104,6 +104,14 @@ paths:
                 totalFriends: 24
                 activeFriends: 18
                 inactiveFriends: 6
+        '400':
+          description: Malformed request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: Malformed request
 components:
   schemas:
     Friend:

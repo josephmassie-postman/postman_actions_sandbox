@@ -1,0 +1,184 @@
+openapi: 3.0.0
+info:
+  title: Pantry Inventory API
+  version: 1.0.0
+  description: Example API for pantry stock, restock planning, and low-stock alerts.
+servers:
+  - url: '{{baseUrl}}'
+paths:
+  /api/pantry/items:
+    get:
+      summary: List pantry items
+      operationId: listPantryItems
+      responses:
+        '200':
+          description: Current pantry inventory.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PantryItemsResponse'
+              example:
+                items:
+                  - sku: PNT-1024
+                    name: Rolled Oats
+                    quantity: 3
+                    unit: bag
+                    location: shelf-a
+  /api/pantry/items/{sku}:
+    patch:
+      summary: Update pantry quantity
+      operationId: updatePantryQuantity
+      parameters:
+        - in: path
+          name: sku
+          required: true
+          schema:
+            type: string
+            pattern: ^PNT-[0-9]{4}$
+          example: PNT-1024
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateQuantityRequest'
+            example:
+              quantity: 5
+      responses:
+        '200':
+          description: Updated pantry record.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PantryItem'
+              example:
+                sku: PNT-1024
+                name: Rolled Oats
+                quantity: 5
+                unit: bag
+                location: shelf-a
+        '404':
+          description: Item not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: Item not found
+  /api/pantry/restock-plan:
+    get:
+      summary: Get suggested restock plan
+      operationId: getRestockPlan
+      responses:
+        '200':
+          description: Suggested items to reorder.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RestockPlanResponse'
+              example:
+                generatedAt: '2026-06-16T17:00:00Z'
+                suggestedOrders:
+                  - sku: PNT-2099
+                    name: Canned Beans
+                    recommendedQuantity: 12
+                    reason: below-threshold
+components:
+  schemas:
+    PantryItem:
+      type: object
+      required:
+        - sku
+        - name
+        - quantity
+        - unit
+        - location
+      properties:
+        sku:
+          type: string
+          pattern: ^PNT-[0-9]{4}$
+          example: PNT-1024
+        name:
+          type: string
+          minLength: 2
+          example: Rolled Oats
+        quantity:
+          type: integer
+          minimum: 0
+          example: 3
+        unit:
+          type: string
+          enum: [bag, can, box, bottle]
+          example: bag
+        location:
+          type: string
+          pattern: ^shelf-[a-z]$
+          example: shelf-a
+      additionalProperties: false
+    PantryItemsResponse:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PantryItem'
+      additionalProperties: false
+    UpdateQuantityRequest:
+      type: object
+      required:
+        - quantity
+      properties:
+        quantity:
+          type: integer
+          minimum: 0
+          example: 5
+      additionalProperties: false
+    RestockSuggestion:
+      type: object
+      required:
+        - sku
+        - name
+        - recommendedQuantity
+        - reason
+      properties:
+        sku:
+          type: string
+          pattern: ^PNT-[0-9]{4}$
+          example: PNT-2099
+        name:
+          type: string
+          example: Canned Beans
+        recommendedQuantity:
+          type: integer
+          minimum: 1
+          example: 12
+        reason:
+          type: string
+          enum: [below-threshold, seasonal-demand]
+          example: below-threshold
+      additionalProperties: false
+    RestockPlanResponse:
+      type: object
+      required:
+        - generatedAt
+        - suggestedOrders
+      properties:
+        generatedAt:
+          type: string
+          format: date-time
+          example: '2026-06-16T17:00:00Z'
+        suggestedOrders:
+          type: array
+          items:
+            $ref: '#/components/schemas/RestockSuggestion'
+      additionalProperties: false
+    Error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+      additionalProperties: false
