@@ -1,0 +1,34 @@
+name: Sync Postman collections
+on:
+  workflow_run:
+    workflows:
+      - Publish changes to Postman
+    types:
+      - completed
+    branches:
+      - main
+
+jobs:
+  sync-collections:
+    # Skip runs triggered by the postman-pull-resources bot commit, so pulling
+    # cloud-created resources back into git doesn't retrigger this sync.
+    if: |
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.actor.login != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Sync collections from specs
+        run: npm ci && npm run sync:collections
+        env:
+          POSTMAN_API_KEY: ${{ secrets.POSTMAN_API_KEY }}
